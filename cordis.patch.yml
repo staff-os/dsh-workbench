@@ -1,0 +1,44 @@
+# 企业工作台能力：AI 员工 / 知识库 / 技能 / MCP / 插件，全部落本地文件。
+#
+# 前置条件：
+# - 无。不需要外部后端，也不需要数据库
+# - 技能市场开箱可用：不配 registries 就走出厂的 ClawHub 官方站，
+#   它的只读接口公开、不需要 token。要换源或加源才需要配 registries；
+#   apiKey 通过凭据服务或环境变量给，不要内联写进 YAML
+
+- insert:
+    - id: workbench
+      name: '@staff-os/dsh-workbench'
+      config:
+        # MCP 与插件管理作用在哪个 profile 上；默认跟随当前 profile
+        profile: !!js >-
+          process.env.DSH_PROFILE?.trim() || 'web'
+        # 技能 / 插件市场。留空用出厂那一条（ClawHub 官方站，只读接口公开、
+        # 不要 token）；给了就整个替换，不会与出厂那条叠加。
+        #
+        # `flavor` 是协议方言：`clawhub` 是默认，`skillhub` 用于
+        # api.skillhub.cn 那种把浏览拆成榜单端点的部署。自建的
+        # ClawHub 兼容服务用 `clawhub` 即可。
+        #
+        # 匿名读按 IP 算配额（ClawHub 官方站 3000/分），配了 key 按用户算
+        # （12000/分）。key 走凭据服务或环境变量，不要内联写进 YAML。
+        registries: !!js >-
+          process.env.CLAWHUB_REGISTRY?.trim()
+            ? [{
+                id: 'clawhub',
+                name: 'ClawHub',
+                url: process.env.CLAWHUB_REGISTRY.trim(),
+                flavor: 'clawhub',
+                apiKeyEnv: 'CLAWHUB_API_KEY',
+              }]
+            : []
+        registryTimeoutMs: 15000
+
+# 工作台自带一条侧栏（56px 图标 rail + 内容列），占的是 ui-layout 的 sidebar 槽。
+# 那是个 single 槽，两个占位方不会报错、只会按注册先后互相遮蔽——结果不确定。
+# 所以这里把上游 ui-sidebar 停掉，让谁画侧栏这件事有个确定答案。
+#
+# 想保留上游侧栏的话，把下面这条去掉；此时两条侧栏抢同一个槽，
+# 显示哪一条取决于插件加载顺序，不建议。
+- id: ui-sidebar
+  disabled: true

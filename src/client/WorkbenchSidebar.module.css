@@ -1,0 +1,206 @@
+/* 工作台侧栏：56px 图标 rail + 内容列的双层结构。
+
+   与上游单列侧栏的区别在于 rail 是**常驻**的独立一列，不是收起后的形态：
+   收起只是把内容列收掉，rail 原样留着。所以分区切换在任何宽度下都可用，
+   而这正是双层菜单相对单列侧栏的意义。 */
+
+.root {
+  display: flex;
+  height: 100%;
+  box-sizing: border-box;
+  background: var(--dsw-specific-sidebar-fill);
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  overflow: hidden;
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+/* ---- rail ---- */
+
+/* 56px 定宽，flex-shrink 关掉：内容列在动画中变宽变窄时 rail 不能跟着挤。 */
+.rail {
+  display: flex;
+  flex: 0 0 56px;
+  width: 56px;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 10px 8px;
+  box-sizing: border-box;
+}
+
+/* 上下两组图标之间用 auto 撑开，底部那组永远贴着底。 */
+.railGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.railGroup.bottom {
+  margin-top: auto;
+}
+
+.brandMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 2px;
+}
+
+/* rail 上的一个控制盒：36x36 居中，圆角方形。 */
+.railButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  transition: background 120ms var(--ds-ease-in-out), color 120ms var(--ds-ease-in-out);
+}
+
+.railButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* 选中态是实心深色块 + 反色图标。用 label-primary 而不是写死的深色，
+   浅色与深色主题下都能自动翻过来。 */
+.railButton.active {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
+}
+
+.railButton.active:hover {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
+}
+
+.railButton:focus-visible {
+  outline: 2px solid var(--dsw-alias-label-primary);
+  outline-offset: 2px;
+}
+
+/* 角标：分区有待处理的东西时点一下。绝对定位在控制盒右上角，
+   不占位、不推动图标。 */
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--dsw-alias-label-primary);
+  box-shadow: 0 0 0 2px var(--dsw-specific-sidebar-fill);
+}
+
+.railDivider {
+  width: 20px;
+  height: 1px;
+  margin: 2px 0;
+  background: var(--dsw-alias-border-l2);
+}
+
+/* 底部的头像位：圆形，与方形控制盒区分开。 */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: var(--dsw-alias-button-elevated-fill);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+}
+
+/* ---- 内容列 ---- */
+
+/* min-width: 0 是必需的：不给的话内部的长会话标题会把这一列顶宽，
+   越过 AppFrame 给的轨道宽度。 */
+.content {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  padding: 6px 12px 6px 0;
+  box-sizing: border-box;
+  border-left: 1px solid var(--dsw-alias-border-l2);
+}
+
+.contentHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 4px 0 12px;
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* 会话区与各域面板共用这一块，撑满剩余高度并自己滚。 */
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 底部座位 ---- */
+
+.footArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+}
+
+/* 内容列收起时设置座位改画在 rail 底部，所以内容列这一份要撤掉，
+   否则同一个座位会被渲染两次。 */
+.railFoot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}

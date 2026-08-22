@@ -1,0 +1,146 @@
+/*
+   面板一系样式表的配色只用 dsh-client-ui-theme 定义过的 token。取不到值的
+   自定义属性会让整条声明在计算阶段作废、颜色退回继承，底与字撞成同一色都
+   不会有任何报错——所以别凭手感造 token 名。
+
+   三级层次不要用 `--dsw-alias-bg-layer-1/2/3`：浅色主题下这三个全是 #fff，
+   照名字取会把层次压平。实际用的是：
+
+     基面（卡片、输入框、面板底）  --dsw-alias-bg-layer-1
+     二级面（hover、内嵌块、横幅）--dsw-alias-interactive-bg-hover
+     三级面（chip、badge、选中态）--dsw-alias-interactive-bg-active
+
+   后两个是半透明叠加，浅色主题往下压、深色主题往上提，铺在任何基面上层次
+   方向都是对的。文字用 label-primary / -secondary / -tertiary，反色底上必须
+   配 label-primary-inverted。 */
+
+/* 管理面板：overlay 层里的一块不透明区域。
+   overlay 那层是 inset:0 且 pointer-events:none，直接子元素自动拿回
+   pointer-events（ui-layout 的 .overlayLayer > * 规则），所以这里不用自己开。 */
+
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  /* left 由组件按侧栏当前宽度写在 style 上：侧栏是 grid 的第一列，
+     overlay 却盖住整个 frame，不让开就把导航挡了。 */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: var(--dsw-alias-bg-base);
+  /* 面板自己画这条竖线：侧栏列那条在 x=width 处，本面板从 rail 右缘起铺，
+     正好把它盖住了。 */
+  border-left: 1px solid var(--dsw-alias-border-l1);
+  overflow: hidden;
+  /* 跟着列宽的缓动走，收起/展开侧栏时面板边缘不会掉队。 */
+  transition: left var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+}
+
+/* ---- 尚未做成维护界面的域 ---- */
+
+/* 版式与员工域（EmployeeSection.module.css）对齐：同样的标题行 + 可滚正文。
+   两边不一致的话，换个域就像换了个应用。 */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.head {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* 正文限宽：这一页全是句子，横铺到 1600px 会读不下去。 */
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 28px 28px;
+  max-width: 720px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.action {
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-primary);
+}
+
+.toolLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.toolName {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 12px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.startButton {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.startButton:hover {
+  opacity: 0.88;
+}

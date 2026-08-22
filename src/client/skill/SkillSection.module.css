@@ -1,0 +1,1373 @@
+/* 技能域的样式。
+
+   版式与员工域（EmployeeSection.module.css）保持一致：同样的标题行、卡片
+   网格、字段块。两边不一致的话，换个域就像换了个应用。
+
+   颜色一律走 DSH 的 --dsw-* 别名令牌，不写死色值：主题切换（含跟随系统）
+   是宿主在 body 上换令牌值实现的，写死的颜色在暗色下会瞎。 */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 28px 16px;
+}
+
+.headText {
+  flex: 1;
+  min-width: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.back:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.search {
+  width: 200px;
+}
+
+/* ---- 本机 / 市场 ---- */
+
+/* 横向分段控件，与员工编辑面板那条竖向 tab 用同一套配色。 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.tab {
+  padding: 8px 14px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.tabActive,
+.tabActive:hover {
+  color: var(--dsw-alias-label-primary);
+  border-bottom-color: var(--dsw-alias-label-primary);
+}
+
+/* ---- 正文 ---- */
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 28px 28px;
+}
+
+.empty {
+  margin: 0;
+  padding: 24px 0;
+  font-size: 13px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* 一条陈述事实的横幅：默认是中性的说明，warn 那种是「改了也没用」。 */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.bannerWarn {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.card:hover {
+  border-color: var(--dsw-alias-border-l3);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* 市场卡片整体不可点，点的是里面那个安装按钮。 */
+.marketCard,
+.marketCard:hover {
+  cursor: default;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.cardMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.cardMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.cardName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardId {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code, monospace);
+}
+
+.cardDesc {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardFacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.fact {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tag {
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.tagWarn {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+/* ---- 字段 ---- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 720px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  line-height: 1.5;
+}
+
+.value {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* SKILL.md 正文：原样显示，自己横向滚，不让长行把面板顶宽。 */
+.source {
+  margin: 0;
+  padding: 12px 14px;
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.checkList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.check input:disabled {
+  cursor: not-allowed;
+}
+
+.check input:disabled + span {
+  opacity: 0.6;
+}
+
+.textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--dsw-alias-border-l3);
+}
+
+/* ---- 市场检索条 ---- */
+
+.marketBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.marketSearch {
+  flex: 1;
+  max-width: 420px;
+}
+
+/* 分类筛选：一排可点的胶囊，选中的那个反色。 */
+.facetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.facet {
+  padding: 4px 11px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.facet:hover {
+  color: var(--dsw-alias-label-primary);
+  border-color: var(--dsw-alias-border-l3);
+}
+
+/*
+  选中的胶囊是反色的：底用 label-primary，字必须用配套的
+  label-primary-inverted。写成别的（比如某个 bg-*）一旦取不到值，字色就退回
+  继承来的 label-primary，跟底同色，字直接看不见。
+*/
+.facetActive,
+.facetActive:hover {
+  border-color: transparent;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
+}
+
+/* PRIVILEGED 标签是来源／认证标记，不是分类，画得低调一点。 */
+.facetMark {
+  border-style: dashed;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.facetMark.facetActive {
+  color: var(--dsw-alias-label-primary-inverted);
+}
+
+/* 展开/收起不是一个分类，所以不描边，免得看着像可选项。 */
+.facetMore {
+  border-color: transparent;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ---- 提示与错误 ---- */
+
+.notices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 28px 0;
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* 成功之后的时间差说明（「重启后生效」），与错误分开显示。 */
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+/* ---- 对话框 ---- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---- 详情：两栏，左正文右事实卡 ----
+
+   版式照着 skillhub 的技能详情页搬：左边是标题、描述、标签与正文/文件两个
+   页签，右边一列事实卡加操作。它比原先那种「一列字段块」好的地方在于，
+   「这是什么」和「它现在什么状态」分在两边，找哪一类都不用通读整页。 */
+
+.detail {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  padding: 4px 28px 32px;
+}
+
+.detailMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 事实卡这一列跟着滚：正文可以很长，操作按钮不该滚出视野。 */
+.detailAside {
+  position: sticky;
+  top: 4px;
+  flex-shrink: 0;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 面板变窄时右列排到正文下面，而不是把正文挤成一条。 */
+@media (max-width: 1020px) {
+  .detail {
+    flex-direction: column;
+  }
+
+  .detailAside {
+    position: static;
+    width: 100%;
+  }
+}
+
+.detailBadges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--dsw-alias-label-primary);
+  word-break: break-word;
+}
+
+/* 作者 / 提供方那一枚：与标题同一区块，所以做成描边胶囊而不是又一行字。 */
+.metaChip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 12px 4px 6px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.metaChipMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--dsw-alias-interactive-bg-active);
+}
+
+.detailDesc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--dsw-alias-label-secondary);
+  word-break: break-word;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 3px 10px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+}
+
+/* 详情内部的页签，比顶部那条细一号，不与它抢层级。 */
+.subTabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.subTab {
+  padding: 6px 12px 8px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.subTab:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.subTabActive,
+.subTabActive:hover {
+  color: var(--dsw-alias-label-primary);
+  border-bottom-color: var(--dsw-alias-label-primary);
+}
+
+/* ---- 事实卡 ---- */
+
+.factCard {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.factRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  font-size: 12px;
+}
+
+.factRow + .factRow {
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.factLabel {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.factValue {
+  min-width: 0;
+  color: var(--dsw-alias-label-primary);
+  font-weight: 500;
+  text-align: right;
+  word-break: break-all;
+}
+
+/* 路径这类长值：等宽字体，允许换行，不撑破卡片。 */
+.factMono {
+  font-family: var(--ds-font-family-code, monospace);
+  font-weight: 400;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.factBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.factBlock + .factBlock,
+.factRow + .factBlock,
+.factBlock + .factRow {
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.factTitle {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.asideActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.asideActions > * {
+  width: 100%;
+}
+
+/* ---- 文件树 ---- */
+
+/* ---- 文件树 ---- */
+
+/* 整棵树是一块带边框的板，头一行说这是什么、一共几个文件。 */
+.tree {
+  margin-top: 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.treeHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.treeHeadMark {
+  display: inline-flex;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.treeCount {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.treeBody {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 目录行是 button、文件行是 div，两者外形一致，靠 :hover 区分能不能点。 */
+.treeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 14px 6px 12px;
+  border: none;
+  background: none;
+  color: var(--dsw-alias-label-secondary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.treeDir {
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.treeDir:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* 文件行留一个和折叠箭头同宽的空位，好让名字与上一层的目录名对齐。 */
+.treeTwisty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.treeMark {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.treeName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeSize {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 正文 ---- */
+
+/* 预览 / 源码：摆在正文上方，比正文本身弱一号。 */
+.docBar {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.docToggle {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.docToggle:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.docToggleActive,
+.docToggleActive:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/*
+  渲染出来的正文。MarkdownText 自带排版，这里只管两件它管不着的事：
+  别把面板撑宽（长 URL 和宽表格要能自己横滚），以及跟四周留一样的间距。
+*/
+.markdown {
+  max-width: 100%;
+  padding: 2px 0;
+  overflow-x: auto;
+  font-size: 13px;
+}
+
+.markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* 折起来的正文：截到固定高度，底下压一层渐变说明「下面还有」。 */
+.markdownClipped {
+  position: relative;
+  max-height: 520px;
+  overflow: hidden;
+}
+
+.markdownClipped::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 80px;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--dsw-alias-bg-layer-1), transparent);
+}
+
+.docMore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.docMore:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* ---- 文件预览 ---- */
+
+/* 比默认弹窗宽：看的是文件，窄了每行都要折。 */
+.previewCard {
+  width: min(880px, 92vw);
+}
+
+.previewCode {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+/* ---- 上传 ---- */
+
+/* 拖放区：点一下等同选文件，所以整块是个 button。 */
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 26px 20px;
+  border: 1px dashed var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.drop:hover,
+.dropOver {
+  border-color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.dropHint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.picked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.pickedName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--ds-font-family-code, monospace);
+}
+
+.pickedSize {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ---- 静态扫描 ---- */
+
+/* 命中行摆在明细框里面，分隔线由列表画，自己不再带边框。 */
+.scanRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+}
+
+.scanRowOpen {
+  cursor: pointer;
+}
+
+.scanRowOpen:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/*
+  严重度那一格宽度固定：一列对齐才看得出「哪几条最要紧」，
+  跟着字数走的话四个字和两个字的会把描述推得参差不齐。
+*/
+.scanSeverity {
+  flex-shrink: 0;
+  width: 44px;
+  padding-top: 1px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.scanCRITICAL,
+.scanHIGH {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.scanBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.scanWhat {
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.scanWhere {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.scanPath {
+  font-family: var(--ds-font-family-code, monospace);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.scanRule {
+  font-family: var(--ds-font-family-code, monospace);
+}
+
+.scanNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* ---- 扫描报告 ---- */
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 960px;
+}
+
+.reportHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.reportMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.reportTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.reportEngine {
+  margin-left: auto;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+/*
+  左边评分卡宽度固定：那个环是这一页的锚点，跟着容器缩会让它一会儿大一会儿小。
+  右边自适应，窄的时候两块上下摞。
+*/
+.reportTop {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .reportTop {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.scoreCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.scoreLabel {
+  align-self: flex-start;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.ring {
+  width: 128px;
+  height: 128px;
+}
+
+.ringTrack {
+  fill: none;
+  stroke: var(--dsw-alias-interactive-bg-active);
+  stroke-width: 10;
+}
+
+.ringFill {
+  fill: none;
+  stroke: var(--dsw-alias-state-warn-label);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.ringFillClean {
+  stroke: var(--dsw-alias-state-success-primary, #0b0);
+}
+
+.ringText {
+  fill: var(--dsw-alias-label-primary);
+  font-size: 34px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.ringTextClean {
+  fill: var(--dsw-alias-state-success-primary, #0b0);
+}
+
+.scoreFacts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+}
+
+.scoreFact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+  font-size: 12px;
+}
+
+.scoreFact dt {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.scoreFact dd {
+  margin: 0;
+  color: var(--dsw-alias-label-primary);
+}
+
+.verdict {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.verdictClean {
+  color: var(--dsw-alias-state-success-primary, #0b0);
+}
+
+.reportRight {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.tileLabel {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+.tileValue {
+  color: var(--dsw-alias-label-primary);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tileFoot {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.tileWarn .tileValue,
+.tileMild .tileValue {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.summaryTitle,
+.sectionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+/*
+  摘要左边那道竖线是这一页唯一的颜色信号：没命中是绿的，有命中是警告色。
+  再往里就不上色了——十三条正则给不出「安全」这个结论，整块刷成绿的会
+  让人以为给出了。
+*/
+.summaryBody {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--dsw-alias-state-warn-label);
+  border-radius: 0 8px 8px 0;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.summaryBodyClean {
+  border-left-color: var(--dsw-alias-state-success-primary, #0b0);
+}
+
+.facesCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.faces {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.face {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.faceName {
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+}
+
+.faceState {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.faceHit .faceState {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.faceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+/* 紧挨着小标题的那一块不用再画一道线，标题下面已经断开了。 */
+.sectionTitle + .faceBlock {
+  padding-top: 0;
+  border-top: none;
+}
+
+.faceHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.faceBadge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.faceBadgeHit {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.faceTag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.faceBlockName {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.log {
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.logHead {
+  padding: 8px 12px;
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+.logQuiet {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.logList > li + li {
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}

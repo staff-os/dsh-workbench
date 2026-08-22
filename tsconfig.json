@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    // emit 时把 `./x.ts` 重写成 `./x.js`：源码里一律写 .ts 扩展名，
+    // 而产物必须引用真实的 .js 文件。
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "src",
+    // 装饰器（employee/remote.ts 的 @Remote）必须由 tsc 转译成运行时代码：
+    // tsdown 底下的 oxc 会把装饰器语法原样吐出来，Node 加载即语法错误。
+    // 所以 Node 半边的构建吃这里 emit 的 JS，而不是直接吃 .ts——与
+    // deepseek-harness 自己的 host 构建同一条路子。
+    "outDir": ".tsbuild",
+    "noEmit": false,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "src"
+  ]
+}
