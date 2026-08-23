@@ -60,6 +60,7 @@ import type {
   MarketPreview,
   MarketView,
   MarketLabel,
+  RegistrySourceInput,
   ScanFinding,
   ScanReport,
   SkillContent,
@@ -73,8 +74,8 @@ import css from './SkillSection.module.css'
 /** 翻译函数，与插槽给组件的那个同形。 */
 type Translate = (key: LocaleKey) => string
 
-/** 本机清单还是市场。 */
-type SkillTab = 'local' | 'market'
+/** 本机清单、市场还是市场配置。 */
+type SkillTab = 'local' | 'market' | 'config'
 
 /** 详情页里的页签。 */
 type DetailTab = 'overview' | 'files' | 'scan'
@@ -271,7 +272,7 @@ function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
       </header>
 
       <div className={css.tabs} role="tablist" aria-label={t('section.skills')}>
-        {(['local', 'market'] as const).map(id => (
+        {(['local', 'market', 'config'] as const).map(id => (
           <button
             key={id}
             type="button"
@@ -280,7 +281,7 @@ function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
             className={clsx(css.tab, tab === id && css.tabActive)}
             onClick={() => { onTab(id) }}
           >
-            {t(id === 'local' ? 'skill.tab.local' : 'skill.tab.market')}
+            {t(id === 'local' ? 'skill.tab.local' : id === 'market' ? 'skill.tab.market' : 'skill.tab.config')}
           </button>
         ))}
       </div>
@@ -289,8 +290,10 @@ function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
 
       {tab === 'market'
         ? <MarketPanel data={data} t={t} onOpen={onOpen} />
-        : (
-          <div className={css.body}>
+        : tab === 'config'
+          ? <MarketConfigPanel data={data} t={t} />
+          : (
+            <div className={css.body}>
             {/* 没有技能服务时这份清单只是目录列表，「生效」「被遮蔽」都无从谈起。 */}
             {state.snapshot?.hasRegistry === false && (
               <p className={css.banner}>{t('skill.noRegistry')}</p>
@@ -1227,6 +1230,167 @@ function MarketCard({ item, t, busy, install, onOpen, onInstall }: {
           </Button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * 市场配置面板：加减与编辑 ClawHub 兼容源。
+ *
+ * 这里的编辑是**本地草稿**，按「保存」才整份写回去。写完立刻生效——`data.writeMarketConfig`
+ * 调的那一头在写完之后会重取一份快照，本地清单里的 registries 跟着变。
+ *
+ * 空列表是一个合法配置，含义是「回退到出厂源」。所以删光再保存不会报错，只是
+ * 转一圈又回到默认。这条要说清，否则「我删光了，怎么市场还能搜」会成为一个谜。
+ */
+function MarketConfigPanel({ data, t }: {
+  readonly data: SkillData
+  readonly t: Translate
+}) {
+  const state = useStore(data.store)
+  const [draft, setDraft] = useState<readonly RegistrySourceInput[] | undefined>(undefined)
+  const [saved, setSaved] = useState(false)
+
+  // 配置只在切到这一页时取一次：它是本地文件，不会自己变。
+  useEffect(() => {
+    let live = true
+    setDraft(undefined)
+    void data.readMarketConfig().then((result) => {
+      if (!live) return
+      setDraft(result.map(source => ({
+        id: source.id,
+        name: source.name,
+        url: source.url,
+        flavor: source.flavor,
+        ...source.apiKeyEnv === undefined ? {} : { apiKeyEnv: source.apiKeyEnv },
+      })))
+    })
+    return () => { live = false }
+  }, [data])
+
+  if (draft === undefined) {
+    return <div className={css.body}><p className={css.empty}>{t('skill.config.loading')}</p></div>
+  }
+
+  const update = (index: number, patch: Partial<RegistrySourceInput>): void => {
+    setDraft(current => current?.map((one, i) => i === index ? { ...one, ...patch } : one))
+  }
+
+  const add = (): void => {
+    setDraft(current => [...current ?? [], { id: '', name: '', url: '', flavor: '', apiKeyEnv: '' }])
+  }
+
+  const remove = (index: number): void => {
+    setDraft(current => current?.filter((_, i) => i !== index))
+  }
+
+  const save = (): void => {
+    // 去掉 id 为空的那些——没有标识的源没法用。
+    const filtered = draft
+      .map(one => ({
+        ...one,
+        id: one.id.trim(),
+        name: one.name.trim(),
+        url: one.url.trim(),
+      }))
+      .filter(one => one.id !== '')
+    void data.writeMarketConfig(filtered).then((result) => {
+      if (result !== undefined) {
+        setSaved(true)
+        setDraft(result.map(source => ({
+          id: source.id,
+          name: source.name,
+          url: source.url,
+          flavor: source.flavor,
+        })))
+        setTimeout(() => { setSaved(false) }, 3000)
+      }
+    })
+  }
+
+  return (
+    <div className={css.body}>
+      <p className={css.subtitle}>{t('skill.config.subtitle')}</p>
+
+      {draft.length === 0 && (
+        <p className={css.banner}>{t('skill.config.empty')}</p>
+      )}
+
+      <ul className={css.configList}>
+        {draft.map((source, index) => (
+          <li key={String(index)} className={css.configCard}>
+            <div className={css.configRow}>
+              <Field label={t('skill.config.field.id')} hint={t('skill.config.field.id.hint')}>
+                <Input
+                  value={source.id}
+                  placeholder="clawhub"
+                  onChange={(event) => { update(index, { id: event.target.value }) }}
+                />
+              </Field>
+              <Field label={t('skill.config.field.name')} hint={t('skill.config.field.name.hint')}>
+                <Input
+                  value={source.name}
+                  placeholder={source.id || 'ClawHub'}
+                  onChange={(event) => { update(index, { name: event.target.value }) }}
+                />
+              </Field>
+            </div>
+            <Field label={t('skill.config.field.url')} hint={t('skill.config.field.url.hint')}>
+              <Input
+                value={source.url}
+                placeholder="https://clawhub.ai"
+                onChange={(event) => { update(index, { url: event.target.value }) }}
+              />
+            </Field>
+            <div className={css.configRow}>
+              <Field label={t('skill.config.field.flavor')} hint={t('skill.config.field.flavor.hint')}>
+                <Input
+                  value={source.flavor ?? ''}
+                  placeholder="clawhub"
+                  onChange={(event) => { update(index, { flavor: event.target.value }) }}
+                />
+              </Field>
+              <Field label={t('skill.config.field.apiKeyEnv')} hint={t('skill.config.field.apiKeyEnv.hint')}>
+                <Input
+                  value={source.apiKeyEnv ?? ''}
+                  placeholder="CLAWHUB_API_KEY"
+                  onChange={(event) => { update(index, { apiKeyEnv: event.target.value }) }}
+                />
+              </Field>
+            </div>
+            <div className={css.configActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<IconTrashOutline16 size={14} />}
+                onClick={() => { remove(index) }}
+              >
+                {t('skill.config.remove')}
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className={css.configFooter}>
+        <Button variant="outline" size="sm" icon={<IconPlusOutline16 size={14} />} onClick={add}>
+          {t('skill.config.add')}
+        </Button>
+        <div className={css.configSave}>
+          {saved && <span className={css.configSaved}>{t('skill.config.saved')}</span>}
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={state.configBusy}
+            icon={<IconEnhanceOutline16 size={14} />}
+            onClick={save}
+          >
+            {t('skill.config.save')}
+          </Button>
+        </div>
+      </div>
+
+      <p className={css.hint}>{t('skill.config.hint')}</p>
     </div>
   )
 }

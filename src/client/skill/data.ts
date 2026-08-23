@@ -26,6 +26,8 @@ import type {
   MarketPage,
   MarketPreview,
   MarketView,
+  RegistryInfo,
+  RegistrySourceInput,
   RemoteResult,
   ScanReport,
   SkillContent,
@@ -63,6 +65,10 @@ export interface SkillState {
   readonly marketError?: string
   /** 各市场源提供的标签；查过之后才有，空数组说明源都不提供。 */
   readonly labels?: readonly MarketLabel[]
+  /** 市场配置；没读过时不存在。 */
+  readonly marketConfig?: readonly RegistryInfo[]
+  /** 市场配置读 / 写进行中。 */
+  readonly configBusy: boolean
 }
 
 /** 技能数据层对外的样子。 */
@@ -117,6 +123,10 @@ export interface SkillData {
   updateAll: () => Promise<boolean>
   /** 查哪些已装技能有新版本。 */
   checkUpdates: () => Promise<void>
+  /** 读出当前生效的市场配置。 */
+  readMarketConfig: () => Promise<readonly RegistryInfo[]>
+  /** 写入市场配置；写完立刻生效。 */
+  writeMarketConfig: (sources: readonly RegistrySourceInput[]) => Promise<readonly RegistryInfo[] | undefined>
 }
 
 /**
@@ -148,7 +158,7 @@ async function fileToBase64(file: File): Promise<string> {
 }
 
 /** 初始状态：还没开始取。 */
-const INITIAL: SkillState = { loading: true, busy: false, marketLoading: false, updatesLoading: false }
+const INITIAL: SkillState = { loading: true, busy: false, marketLoading: false, updatesLoading: false, configBusy: false }
 
 /** 把 Remote 失败转成一句人话。 */
 function failureText(
@@ -494,6 +504,50 @@ export function createSkillData(remote: () => SkillRemote | undefined): SkillDat
         return
       }
       store.set(current => ({ ...current, marketLoading: false, market: result.value }))
+    },
+
+    readMarketConfig: async () => {
+      const face = remote()
+      if (face === undefined) {
+        noChannel()
+        return []
+      }
+      store.set(current => ({ ...current, configBusy: true }))
+      try {
+        const result = await face.marketConfigRead()
+        if (!result.ok) {
+          store.set(current => ({ ...current, configBusy: false, error: failureText(result) }))
+          return []
+        }
+        store.set(current => ({ ...current, configBusy: false, marketConfig: result.value }))
+        return result.value
+      } catch (cause) {
+        store.set(current => ({ ...current, configBusy: false, error: causeText(cause) }))
+        return []
+      }
+    },
+
+    writeMarketConfig: async (sources) => {
+      const face = remote()
+      if (face === undefined) {
+        noChannel()
+        return undefined
+      }
+      store.set(current => ({ ...current, configBusy: true }))
+      try {
+        const result = await face.marketConfigWrite(sources)
+        if (!result.ok) {
+          store.set(current => ({ ...current, configBusy: false, error: failureText(result) }))
+          return undefined
+        }
+        // 写完立刻取一份新快照，让本地清单里的 registries 也跟着变。
+        store.set(current => ({ ...current, configBusy: false, marketConfig: result.value }))
+        void api.refresh()
+        return result.value
+      } catch (cause) {
+        store.set(current => ({ ...current, configBusy: false, error: causeText(cause) }))
+        return undefined
+      }
     },
   }
 

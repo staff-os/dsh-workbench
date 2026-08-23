@@ -52,6 +52,8 @@ import { findSkillsInPackage, selectSkillFromPackage } from './package.ts'
 import { decodeUploadedPackage, readPackageBytes } from './source.ts'
 import { forgetInstall, isNewerVersion, readLedger, recordInstall } from './ledger.ts'
 import type { SkillOrigin, UpdateStatus } from './ledger.ts'
+import { readMarketConfig, writeMarketConfig } from './market-config.ts'
+import type { RegistryFlavor, RegistrySource } from '../types.ts'
 import { collectSkills, projectLocal, projectMarket, projectRejected, projectWinner, winnerIsLocal } from './view.ts'
 import type { MarketView, RejectedView, SkillView } from './view.ts'
 
@@ -62,6 +64,20 @@ export interface RegistryInfo {
   readonly url: string
   /** 协议方言，界面上用来说明这个源支持哪些浏览方式。 */
   readonly flavor: string
+}
+
+/** 市场配置写操作的入参——一条源的编辑表单。 */
+export interface RegistrySourceInput {
+  /** 源标识；空字符串会被过滤掉。 */
+  readonly id: string
+  /** 展示名；留空时用 id 顶上。 */
+  readonly name: string
+  /** 服务根地址。 */
+  readonly url: string
+  /** 协议方言；留空按 clawhub 处理。 */
+  readonly flavor?: string
+  /** 凭据引用名；只存引用，不存明文。 */
+  readonly apiKeyEnv?: string
 }
 
 /** 一次技能列表读取的结果。 */
@@ -868,17 +884,73 @@ export class WorkbenchSkillGateway extends TypertRemoteService {
     )
   }
 
+  /** 当前生效的市场源列表。 */
+  private async registrySources(): Promise<readonly RegistrySource[]> {
+    return this.runtime().loadRegistrySources()
+  }
+
+  /**
+   * 读出市场配置。
+   *
+   * 返回的是当前生效的源列表：优先运行时配置文件（用户在界面上配的那些），
+   * 回退到静态配置（Cordis 配置或出厂那一条）。
+   * @returns 当前生效的市场源列表。
+   */
+  @Remote('marketConfigRead')
+  async marketConfigRead(): Promise<readonly RegistryInfo[]> {
+    const sources = await this.registrySources()
+    return sources.map(source => ({
+      id: source.id,
+      name: source.name,
+      url: source.url,
+      flavor: source.flavor ?? 'clawhub',
+      ...source.apiKeyEnv === undefined || source.apiKeyEnv === '' ? {} : { apiKeyEnv: source.apiKeyEnv },
+    }))
+  }
+
+  /**
+   * 写入市场配置。
+   *
+   * 整份替换，而不是增量改：市场源少且每次改动都要整体校验，增量格式只会
+   * 让「删到最后一个时报 id 不存在」这类边角情况变多。写完立刻生效，不必重启。
+   * @param sources - 要设成哪些源；空数组表示清空，会回退到出厂那条。
+   */
+  @Remote('marketConfigWrite')
+  async marketConfigWrite(sources: readonly RegistrySourceInput[]): Promise<readonly RegistryInfo[]> {
+    const cleaned: RegistrySource[] = sources
+      .filter(s => s.id.trim() !== '' && s.url.trim() !== '')
+      .map((s, index) => ({
+        id: s.id.trim(),
+        name: s.name.trim() === '' ? s.id.trim() : s.name.trim(),
+        url: s.url.trim(),
+        ...s.flavor === undefined || s.flavor === '' ? {} : { flavor: s.flavor as RegistryFlavor },
+        ...s.apiKeyEnv === undefined || s.apiKeyEnv.trim() === '' ? {} : { apiKeyEnv: s.apiKeyEnv.trim() },
+        // 没给 id 的用序号生成一个，免得整条丢掉
+        ...s.id.trim() === '' ? { id: `source-${String(index)}` } : {},
+      }))
+    await writeMarketConfig(this.runtime().paths.workbench, cleaned)
+    await this.runtime().applyRegistrySources(cleaned)
+    return cleaned.map(source => ({
+      id: source.id,
+      name: source.name,
+      url: source.url,
+      flavor: source.flavor ?? 'clawhub',
+      ...source.apiKeyEnv === undefined || source.apiKeyEnv === '' ? {} : { apiKeyEnv: source.apiKeyEnv },
+    }))
+  }
+
   /** 当前的完整快照。 */
   private async snapshot(): Promise<SkillSnapshot> {
     const root = this.root()
-    const [skills, scan] = await Promise.all([
+    const [skills, scan, sources] = await Promise.all([
       collectSkills(this.ctx, root),
       scanLocalSkills(root),
+      this.registrySources(),
     ])
     return {
       skills,
       rejected: scan.rejected.map(projectRejected),
-      registries: this.runtime().registry.listSources().map(source => ({
+      registries: sources.map(source => ({
         id: source.id,
         name: source.name,
         url: source.url,

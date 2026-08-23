@@ -1371,3 +1371,54 @@
 .logList > li + li {
   border-top: 1px solid var(--dsw-alias-border-l1);
 }
+
+/* ---- 市场配置 ---- */
+
+.configList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.configCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.configRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.configActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.configFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.configSave {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.configSaved {
+  color: var(--dsw-alias-state-success-primary, #0b0);
+  font-size: 12px;
+}

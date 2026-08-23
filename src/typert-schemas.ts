@@ -272,6 +272,7 @@ const registryInfo$schema = z.object({
   name: z.string(),
   url: z.string(),
   flavor: z.string(),
+  apiKeyEnv: z.string().optional(),
 })
 
 /** 一个被 DSH 拒收的盘上条目。与 `skill/view.ts` 的 `RejectedView` 对应。 */
@@ -416,6 +417,15 @@ const scanReport$schema = z.object({
 const number$schema = z.number()
 const boolean$schema = z.boolean()
 
+/** 市场配置写操作的入参——一条源的编辑表单。 */
+const registrySourceInput$schema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  flavor: z.string().optional(),
+  apiKeyEnv: z.string().optional(),
+})
+
 /** 技能域的全部 Remote 调用。 */
 export const SKILL_DESCRIPTORS: readonly unknown[] = [
   descriptor(SKILL_NAMESPACE, 'list', [], {
@@ -544,6 +554,16 @@ export const SKILL_DESCRIPTORS: readonly unknown[] = [
   descriptor(SKILL_NAMESPACE, 'updates', [], {
     typeSymbol: `${SYMBOL}UpdateStatus[]`,
     schema: z.array(updateStatus$schema),
+  }),
+  descriptor(SKILL_NAMESPACE, 'marketConfigRead', [], {
+    typeSymbol: `${SYMBOL}RegistryInfo[]`,
+    schema: z.array(registryInfo$schema),
+  }),
+  descriptor(SKILL_NAMESPACE, 'marketConfigWrite', [
+    parameter('sources', z.array(registrySourceInput$schema), `${SYMBOL}RegistrySourceInput[]`),
+  ], {
+    typeSymbol: `${SYMBOL}RegistryInfo[]`,
+    schema: z.array(registryInfo$schema),
   }),
 ]
 

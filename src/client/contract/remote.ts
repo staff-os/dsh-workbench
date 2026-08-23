@@ -225,6 +225,22 @@ export interface RegistryInfo {
   readonly name: string
   readonly url: string
   readonly flavor: string
+  /** 凭据引用名；只存引用，不存明文。回传也是安全的：它不是 key 本身。 */
+  readonly apiKeyEnv?: string
+}
+
+/** 市场配置写操作的入参——一条源的编辑表单。 */
+export interface RegistrySourceInput {
+  /** 源标识；空字符串会被过滤掉。 */
+  readonly id: string
+  /** 展示名；留空时用 id 顶上。 */
+  readonly name: string
+  /** 服务根地址。 */
+  readonly url: string
+  /** 协议方言；留空按 clawhub 处理。 */
+  readonly flavor?: string
+  /** 凭据引用名；只存引用，不存明文。 */
+  readonly apiKeyEnv?: string
 }
 
 /** 写完之后那份技能的真实处境；回读 `ctx.skills` 得来，不是预测。 */
@@ -451,6 +467,10 @@ export interface SkillRemote {
   /** 把所有有新版本的已装技能一次更新完。 */
   marketUpdateAll: () => Promise<RemoteResult<SkillMutation>>
   updates: () => Promise<RemoteResult<readonly UpdateStatus[]>>
+  /** 读出当前生效的市场配置。 */
+  marketConfigRead: () => Promise<RemoteResult<readonly RegistryInfo[]>>
+  /** 写入市场配置；整份替换，写完立刻生效。 */
+  marketConfigWrite: (sources: readonly RegistrySourceInput[]) => Promise<RemoteResult<readonly RegistryInfo[]>>
 }
 
 /** `ctx.remote` 里本包用到的那部分。 */

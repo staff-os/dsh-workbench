@@ -618,7 +618,7 @@ const ACCEPT_LANGUAGE = 'zh-CN,zh;q=0.9,en;q=0.8'
 const DEFAULT_NAMESPACE = 'global'
 
 export class RegistryClient {
-  private readonly sources: readonly RegistrySource[]
+  private sources: readonly RegistrySource[]
   private readonly cacheDir: string
   private readonly timeoutMs: number
   private readonly resolveApiKey: ((ref: string) => Promise<string | undefined>) | undefined
@@ -633,6 +633,16 @@ export class RegistryClient {
   /** 已配置的源；空数组说明用户没配 registry，市场类动作要给出明确提示。 */
   listSources(): readonly RegistrySource[] {
     return this.sources
+  }
+
+  /**
+   * 在运行时替换源列表。
+   *
+   * 用户在界面上加减市场源后立刻生效，不必重启——`RegistryClient` 的其余
+   * 状态（缓存目录、超时、凭据解析）都不随源列表变，所以只换这一份。
+   */
+  setSources(sources: readonly RegistrySource[]): void {
+    this.sources = sources
   }
 
   /**
