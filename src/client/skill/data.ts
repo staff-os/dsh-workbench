@@ -103,6 +103,8 @@ export interface SkillData {
   ) => Promise<boolean>
   /** 装一个用户选的本地压缩包。 */
   upload: (file: File, overwrite?: boolean, name?: string) => Promise<boolean>
+  /** 从一个下载链接（含 GitHub 仓库地址）装技能包。 */
+  importUrl: (url: string, overwrite?: boolean, name?: string) => Promise<boolean>
   /** 读一个市场条目的详情。 */
   marketGet: (slug: string, registry?: string) => Promise<MarketView | undefined>
   /** 读市场条目包里某一个文件。 */
@@ -382,6 +384,17 @@ export function createSkillData(remote: () => SkillRemote | undefined): SkillDat
         return false
       }
       return mutate(face => face.importPackage(file.name, encoded, overwrite, name))
+    },
+
+    importUrl: async (url, overwrite, name) => {
+      const value = url.trim()
+      // 空串挡在这里而不是让服务端报「必须给 from」：这一步没有网络往返，
+      // 反馈是即时的。
+      if (value === '') {
+        store.set(current => ({ ...current, error: '请先填一个链接' }))
+        return false
+      }
+      return mutate(face => face.importUrl(value, overwrite, name))
     },
 
     marketGet: async (slug, registry) => {

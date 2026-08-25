@@ -7,6 +7,7 @@
    是宿主在 body 上换令牌值实现的，写死的颜色在暗色下会瞎。 */
 
 .section {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -64,38 +65,43 @@
   flex-shrink: 0;
 }
 
-.search {
-  width: 200px;
-}
-
 /* ---- 本机 / 市场 ---- */
 
-/* 横向分段控件，与员工编辑面板那条竖向 tab 用同一套配色。 */
+/* 分段控件：一排胶囊，选中的那个反色。
+
+   原先是下划线式的页签，与这一页另外两处可点的胶囊（分类筛选、状态角标）
+   各说各话；统一成同一种形状之后，「可点、可切」在这一域只有一种长相。
+   底下那条线留着——它划的是导航与内容的界，不是页签自己的装饰。 */
 .tabs {
   display: flex;
   gap: 4px;
-  padding: 0 28px;
+  padding: 2px 28px 12px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
 }
 
 .tab {
-  padding: 8px 14px 10px;
+  padding: 8px 18px;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-radius: 999px;
   background: none;
   color: var(--dsw-alias-label-secondary);
   font-size: 13px;
+  line-height: 1.4;
   cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
 }
 
 .tab:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
 
+/* 反色胶囊：底用 label-primary，字必须用配套的 label-primary-inverted。
+   写成别的一旦取不到值，字色就退回继承来的 label-primary，跟底同色。 */
 .tabActive,
 .tabActive:hover {
-  color: var(--dsw-alias-label-primary);
-  border-bottom-color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
 }
 
 /* ---- 正文 ---- */
@@ -135,54 +141,508 @@
   color: var(--dsw-alias-state-warn-label);
 }
 
+/* ---- 方牌 ----
+
+   卡片与清单行左上角那块写着头一个字的方牌。它替掉的是原先所有卡片共用的
+   同一个扳手图标——那个图标在网格里重复二十遍，等于没有；一块带首字的色牌
+   至少能让人在滚动时靠位置和颜色认回刚才看过的那一条。 */
+
+.glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* 清单行上的那块小一号：行比卡片矮，44px 会把行撑起来。 */
+.glyphSm {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+/*
+  六档配色。底色一律是某个状态色**兑到几乎透明**再铺在卡面上，而不是写死的
+  浅色：写死的话暗色主题下这块牌会亮得像一个高亮块。兑得这么淡是有意的——
+  它是一个区分记号，不是一个状态，饱和度一上来就会被读成「这条有问题」。
+
+  字色统一走 label-primary：底下只有一层极淡的色，前景不需要跟着换，换了
+  反而在两个主题之间对不齐。最后一档整块反色，字得配 inverted。
+*/
+.glyph0 {
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-primary);
+}
+
+.glyph1 {
+  background: color-mix(in oklab, var(--dsw-alias-state-success-primary) 16%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+
+.glyph2 {
+  background: color-mix(in oklab, var(--dsw-alias-state-warn-primary) 16%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+
+.glyph3 {
+  background: color-mix(in oklab, var(--dsw-alias-brand-primary) 16%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+
+.glyph4 {
+  background: color-mix(in oklab, var(--dsw-alias-state-business-primary) 16%, transparent);
+  color: var(--dsw-alias-label-primary);
+}
+
+.glyph5 {
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
+}
+
+/* ---- 市场卡片 ---- */
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 18px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.card {
+/* 整张卡是一个按钮：卡上没有安装按钮，点哪儿都是进详情。 */
+.marketCard {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: 14px 16px;
+  padding: 20px;
   text-align: left;
   border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--dsw-alias-bg-layer-1);
   cursor: pointer;
-  transition: border-color 120ms ease, background 120ms ease;
+  transition:
+    transform 160ms var(--ds-ease-in-out, ease),
+    box-shadow 160ms var(--ds-ease-in-out, ease),
+    border-color 160ms var(--ds-ease-in-out, ease);
 }
 
-.card:hover {
+.marketCard:hover {
+  transform: translateY(-2px);
   border-color: var(--dsw-alias-border-l3);
+  box-shadow: 0 10px 26px rgb(0 0 0 / 8%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketCard {
+    transition: none;
+  }
+
+  .marketCard:hover {
+    transform: none;
+  }
+}
+
+.marketCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/*
+  哪个源来的。搜索结果是几个源混在一起的，同一个 slug 在不同源上是不同的包，
+  所以这一条必须留在卡面上，不能只在详情里说。
+*/
+.registryPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 4px 9px 4px 7px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.registryDot {
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-secondary);
+}
+
+/* 它在本机是什么处境。等宽字，因为这一行是状态不是句子。 */
+.cardStatus {
+  margin-bottom: 7px;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.cardStatusOn {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+/* 「仅浏览」是别家目录的镜像条目，这个源上没有它的包，压暗一档。 */
+.cardStatusOff {
+  color: var(--dsw-alias-label-dimmed);
+}
+
+.cardName {
+  margin-bottom: 6px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.cardDesc {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* 撑开的空档：卡片高度由网格拉齐，底下那排数字得贴着底边对齐。 */
+.cardSpacer {
+  flex: 1;
+  min-height: 14px;
+}
+
+.cardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.cardTag {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.cardMetrics {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 11px;
+}
+
+.metricMark {
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+/* ---- 已装清单：一行一个 ----
+
+   横排而不是网格：这份清单要回答的是「盘上现在有什么、它生没生效、调不调
+   得到」，都是逐项对齐着看的事实，网格会把同一列的事实错开。 */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 窄下来时右边那截整条落到下一行，而不是把名字和路径挤没。面板宽度是窗口
+   宽度减掉侧栏那条 rail，用户把窗口拖窄了这一行就得让位。 */
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  row-gap: 10px;
+  padding: 14px 18px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 14px;
+  background: var(--dsw-alias-bg-layer-1);
+  transition: border-color 120ms ease;
+}
+
+.row:hover {
+  border-color: var(--dsw-alias-border-l3);
+}
+
+/* 可点的是左边这一整块，不是整行：右边那截里有更新按钮，套在一个大按钮里
+   就是按钮套按钮——HTML 不合法，点更新还会连带把详情页也打开。 */
+.rowOpen {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1 1 300px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.rowTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rowName {
+  color: var(--dsw-alias-label-primary);
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowSource {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 5px;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 11px;
+}
+
+.rowPath {
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowNote {
+  margin-top: 3px;
+  color: var(--dsw-alias-state-warn-label);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.rowSide {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ---- 角标与开关状态 ---- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.badgeWarn {
+  background: color-mix(in oklab, var(--dsw-alias-state-warn-primary) 14%, transparent);
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.badgeGood {
+  background: color-mix(in oklab, var(--dsw-alias-state-success-primary) 14%, transparent);
+  color: var(--dsw-alias-state-success-primary);
+}
+
+/*
+  两个调用方式的开关状态。关掉的那个不撤掉，改成划掉的虚线框——只画开着的
+  那个的话，「这个技能不能被模型自己调用」与「界面忘了说」在屏幕上长得一样。
+*/
+.stateChip {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.stateChipMono {
+  font-family: var(--ds-font-family-code, monospace);
+}
+
+.stateChipOff {
+  border-color: var(--dsw-alias-border-l2);
+  border-style: dashed;
+  background: none;
+  color: var(--dsw-alias-label-dimmed);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+/* ---- 工具条与结果行 ---- */
+
+.toolBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.toolBarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* 圆角搜索框。用原生 input 而不是 primitives 的 Input：那个是方角的，
+   摆在一排胶囊中间会像另一套控件。 */
+.searchPill {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 320px;
+  padding: 8px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.searchPill:focus-within {
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.searchMark {
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.searchInput::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.resultLine {
+  margin: 0;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+/* ---- 被 DSH 拒收 ----
+
+   虚线框：盘上有这些文件，但它们不算数。实线会让它们看着像清单的一部分。 */
+
+.rejected {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.rejectedTitle {
+  margin: 0;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rejectedHint {
+  margin: 6px 0 12px;
+  max-width: 640px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.rejectedList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rejectedRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px dashed var(--dsw-alias-border-l2);
+  border-radius: 12px;
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-/* 市场卡片整体不可点，点的是里面那个安装按钮。 */
-.marketCard,
-.marketCard:hover {
-  cursor: default;
-  background: var(--dsw-alias-bg-layer-1);
-}
-
-.cardMark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.rejectedMark {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: var(--dsw-alias-interactive-bg-active);
-  color: var(--dsw-alias-label-secondary);
+  color: var(--dsw-alias-state-warn-label);
 }
 
-.cardMain {
+.rejectedMain {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -190,58 +650,27 @@
   flex: 1;
 }
 
-.cardTitle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex-wrap: wrap;
+.rejectedName {
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 12px;
 }
 
-.cardName {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--dsw-alias-label-primary);
+.rejectedPath {
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.cardId {
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);
-  font-family: var(--ds-font-family-code, monospace);
-}
-
-.cardDesc {
-  font-size: 12px;
+.rejectedReason {
+  flex: none;
+  max-width: 330px;
   color: var(--dsw-alias-label-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.cardFacts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.fact {
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--dsw-alias-interactive-bg-active);
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.cardActions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .tag {
@@ -344,15 +773,31 @@
 
 /* ---- 市场检索条 ---- */
 
+/* 分类占左边、搜索靠右，摆在同一行：两者是同一件事的两种收窄方式，
+   分成上下两条会让人以为要先选一个再搜。 */
 .marketBar {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.marketSearchGroup {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: none;
+  margin-left: auto;
 }
 
-.marketSearch {
-  flex: 1;
-  max-width: 420px;
+/* 搜索框在这一组里不再抢空间，按钮也不许被压窄——不定死的话「搜索」两个字
+   会被挤成竖排。 */
+.marketSearchGroup .searchPill {
+  flex: 0 1 260px;
+}
+
+.marketSearchGroup > :last-child {
+  flex: none;
 }
 
 /* 分类筛选：一排可点的胶囊，选中的那个反色。 */
@@ -360,6 +805,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  flex: 1 1 320px;
+  min-width: 0;
 }
 
 .facet {
@@ -408,13 +855,6 @@
 
 /* ---- 提示与错误 ---- */
 
-.notices {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 28px 0;
-}
-
 .error {
   display: flex;
   align-items: flex-start;
@@ -428,33 +868,20 @@
   line-height: 1.6;
 }
 
-/* 成功之后的时间差说明（「重启后生效」），与错误分开显示。 */
-.notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
+/* 浮层里那个「知道了」。它只出现在反色底上，所以颜色也得是 inverted 一系，
+   照抄原先横幅上那份 label-tertiary 会糊在底色里。 */
 .dismiss {
   flex-shrink: 0;
   padding: 0;
   border: none;
   background: none;
-  color: var(--dsw-alias-label-tertiary);
+  color: color-mix(in oklab, var(--dsw-alias-label-primary-inverted) 60%, transparent);
   font-size: 12px;
   cursor: pointer;
 }
 
 .dismiss:hover {
-  color: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
 }
 
 /* ---- 对话框 ---- */
@@ -1421,4 +1848,266 @@
 .configSaved {
   color: var(--dsw-alias-state-success-primary, #0b0);
   font-size: 12px;
+}
+
+/* ---- 市场详情：安全结论与三格数字 ---- */
+
+/*
+  安全审核结论。这张卡顶在右栏最上面，在安装按钮之前——装一个技能不是装一个
+  库，SKILL.md 的正文是模型会照着执行的一段指令。
+
+  结论本身不上色：这串字是源给的自由文本，可能是「已通过」也可能是「审核中」
+  或「未通过」，界面不知道它是好消息还是坏消息，一律涂绿会把后两种说成前一种。
+*/
+.securityCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.securityMark {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.securityText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.securityTitle {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 源不给这个字段时压一档：这不是一个结论，只是一句「这里没有结论」。 */
+.securityUnknown {
+  color: var(--dsw-alias-label-secondary);
+  font-weight: 400;
+}
+
+.securityNote {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* 三格数字。格线是底色透出来的 1px 缝，不是三条 border——那样中缝会是 2px。 */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-border-l1);
+  overflow: hidden;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.statValue {
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 16px;
+}
+
+.statLabel {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+}
+
+/* ---- 导入对话框：四种来源 ---- */
+
+.modeList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.mode:hover {
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.modeActive {
+  border-color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.modeMark {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.modeText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.modeLabel {
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+}
+
+.modeNote {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
+
+/* 选中记号自己画：原生 radio 在这套主题里没有配色，摆进来是另一套控件。 */
+.modeCheck {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+}
+
+.modeCheckOn {
+  border-color: transparent;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
+}
+
+.modeInput {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1);
+  color: var(--dsw-alias-label-primary);
+  font-family: var(--ds-font-family-code, monospace);
+  font-size: 12px;
+  outline: none;
+}
+
+.modeInput:focus {
+  border-color: var(--dsw-alias-border-l3);
+}
+
+.modeInput::placeholder {
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* ---- 结果浮层 ----
+
+   浮在这一页左下角，不占版面。原先是夹在页签与列表之间的一条横幅，它会把
+   整份列表往下推一截——装完一个技能之后刚才在看的那一行就跑了位置，而人这
+   时候多半正想接着装下一个。 */
+
+.toasts {
+  position: absolute;
+  left: 28px;
+  bottom: 24px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(440px, calc(100% - 56px));
+}
+
+/*
+  反色底。底用 label-primary，字必须用配套的 label-primary-inverted——写成别的
+  一旦取不到值，字色会退回继承来的 label-primary，跟底同色。
+*/
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 13px;
+  background: var(--dsw-alias-label-primary);
+  color: var(--dsw-alias-label-primary-inverted);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 24%);
+  animation: toastRise 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes toastRise {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+.toastMark {
+  flex-shrink: 0;
+  margin-top: 1px;
+  opacity: 0.75;
+}
+
+/*
+  失败与「没生效」这两种只把图标提到全不透明，不上色。
+
+  state-* 那几个令牌是按**普通底**调的，而这块底是反色的：浅色主题下暖橙压在
+  近黑底上、深色主题下亮橙压在近白底上，两边都掉对比。哪一种结果靠图标形状
+  （对勾 / 三角）和标题那句话分辨，不靠颜色——这两样在任何主题下都成立。
+*/
+.toastBad .toastMark,
+.toastWarn .toastMark {
+  opacity: 1;
+}
+
+.toastText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.toastTitle {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.toastBody {
+  color: color-mix(in oklab, var(--dsw-alias-label-primary-inverted) 66%, transparent);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }

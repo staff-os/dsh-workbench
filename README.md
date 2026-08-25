@@ -149,13 +149,19 @@ slug. GitHub page URLs are rewritten to the `/tarball` endpoint. Unpacking valid
 per-file and total size, and rejects `..`, absolute paths and NUL bytes; files land in a staging
 directory **outside the skill root**, and only a validated directory is renamed into place.
 
-The UI adds an **upload** entry: pick an archive in the browser and its bytes ride along with one
-call. It shares the same unpacking and install path as `import`, differing in exactly two ways — an
-8 MiB cap per upload (this path has no chunking and no streaming, and base64 adds another third, so
-copying the unpacker's 50 MiB limit would blow up a single call), and **no ledger entry**: an
-uploaded package has no marketplace coordinates, and a fabricated one would make later update checks
-take the skill's name to the marketplace, find some unrelated package of the same name, and overwrite
-the user's own work with it.
+The UI goes through two other Remote calls: **upload** (`importPackage` — pick an archive in the
+browser and its bytes ride along with one call) and **import from a link** (`importUrl` — hand the
+address to the server, with GitHub page URLs rewritten to `/tarball` by the same
+`classifyImportSource`). Both share the unpacking and install path of `import`, differing in exactly
+two ways — an 8 MiB cap per upload (this path has no chunking and no streaming, and base64 adds
+another third, so copying the unpacker's 50 MiB limit would blow up a single call), and **no ledger
+entry**: a package that arrived by hand or from an arbitrary link has no marketplace coordinates,
+and a fabricated one would make later update checks take the skill's name to the marketplace, find
+some unrelated package of the same name, and overwrite the user's own work with it.
+
+`importUrl` accepts `http(s)` only and rejects local paths outright: `import` is the model's entry
+and runs server-side, while this one fires from a click in the browser — reading an arbitrary path
+off the server's disk should not be one click away.
 
 **The installed directory name comes from the package's own frontmatter `name`**: that is the
 identity DSH registers.
@@ -234,13 +240,20 @@ main area; switching back to sessions removes it entirely and the conversation r
 untouched.
 
 **Skills** has a complete surface today: the list and the detail are not dialogs but an inline
-surface covering the list, with a "back to list" control on top. Two pages — local inventory and
-marketplace.
+surface covering the list, with a "back to list" control on top. Three pages — local inventory,
+marketplace, and marketplace config — switched with a row of pills; the other two clickable things
+on this page (category filters, status badges) are pills too, so "clickable and switchable" has one
+shape here rather than three.
 
 The detail is **two columns**: what this thing is on the left (title, description, tags, and an
 overview/files pair of tabs), what state it is in on the right (source, path, visibility and the
 rest, plus update and delete). Local skills and marketplace entries share the layout, because they
 describe the same kind of thing and a second arrangement would mean learning where to look twice.
+For a marketplace entry the right column leads with the **security verdict**, ahead of the install
+button: installing a skill is not installing a library, the body of a SKILL.md is instructions the
+model will follow. The verdict itself is not colour-coded — it is free text from the source, which
+may read "approved", "under review" or "rejected", and painting all three green would state the
+last two as the first.
 
 "Overview" **renders** the SKILL.md through the host's `MarkdownText` — the same renderer that draws
 model replies in the conversation. Not pulling in a markdown stack of our own has two reasons: it is
@@ -278,12 +291,35 @@ not `path`; and since a flat skill's (`<name>.md`) `resourceBase` is the skill *
 would attribute every skill's files to this one — hence a directory only counts as a skill directory
 when it actually holds a SKILL.md.
 
-The local page has two entries: **upload** a ready-made skill archive (the common case) or
-**create** a SKILL.md from scratch. Skills installed from a marketplace carry an "Installed vX" pill,
-plus a "New vY" one when a newer version exists; the header has "Check for updates" and "Update all
-(N)". **Both only apply to skills the ledger has an origin for** — a hand-written skill has no
-upstream version, so stamping one on it invents a fact, and taking its name to a marketplace to find
-some same-named entry would overwrite the user's own work with an unrelated package.
+The local page has two entries: **import** a ready-made skill package (the common case) or
+**create** a SKILL.md from scratch. The import dialog offers four sources — an archive uploaded from
+the browser, a download link, a GitHub repository URL, and a marketplace slug — over one unpack-and-
+land path; the four branches differ only in where the bytes come from. **Only the marketplace slug
+gets a ledger entry**: the other three have no registry coordinates, and a fabricated one would make
+later update checks take the skill's name to a marketplace and overwrite the user's work with some
+unrelated package. The cost is that those three never show up in update checks.
+
+The installed inventory is **one row per skill** rather than a card grid: what it has to answer is
+"what is on disk, is it in effect, can it be invoked" — facts you read down a column, which a grid
+would stagger. A row runs left to right in the order people check them: who it is (an initial tile
+and the name), where it is (source and path), how it is invoked (the model-invocable and
+slash-trigger switches; a switch that is off is struck through rather than dropped, because drawing
+only the ones that are on makes "cannot be invoked" and "the UI forgot to say" look identical), and
+whether to touch it (an update button, present only when a newer version exists).
+
+A line of counts above the list says what is in here: how many in total, how many this plugin
+manages, how many are shadowed, how many were rejected. The last two are reported even at zero —
+they are the two things in this domain most likely to waste someone's afternoon, and showing them
+only when non-zero means nobody knows the UI checked. The rejected files are listed one by one in a
+dashed-border section **below** the list: they are not a folded-away part of it but a different kind
+of thing, on disk yet discarded whole by DSH.
+
+![The installed inventory: one row per skill, identity and path on the left, the two invocation switches on the right (an off switch is struck through rather than dropped); a shadowed copy carries an "inactive" badge and an explanation, and rejected files sit in a dashed-border section below](assets/images/local_skills.png)
+
+**All of the version machinery only applies to skills the ledger has an origin for** — a
+hand-written skill has no upstream version, so stamping one on it invents a fact, and taking its
+name to a marketplace to find some same-named entry would overwrite the user's own work with an
+unrelated package.
 
 "Check for updates" is its own button rather than folded into "reload": it goes over the network to
 every source, while reload is the most-pressed thing on this page and should not wait on a
@@ -292,12 +328,28 @@ failures **separately** — saying "updated N" while swallowing the failures rea
 updated". Skills whose update could not be checked at all (source unreachable) get their own line;
 otherwise the UI silently presents them as up to date, which is a quiet lie.
 
-The marketplace side follows the same rule: "Installed vX" only appears on the entry the ledger
-recognizes (same source, same slug); a mere name collision says "Name taken". Merging the two would
-make "overwrite install" read like an update when it actually replaces a same-named skill from a
-different origin. Switching to the marketplace loads the first page of entries
-immediately rather than waiting for a search click — what people do on that page is look at what is
-there, not arrive with a name already in mind.
+Marketplace cards carry **no install button**; the whole card opens the detail. That is
+deliberate: a card cannot hold what deciding to install actually takes (who published it, whether
+the platform reviewed it, what is in the package, what the static scan matched), and making
+"install" reachable only after those have been on screen beats clicking through a grid. What stays
+on the card is what compares at a glance — which source it came from (results mix several sources,
+and the same slug is a different package on each), how it stands on this machine (a monospace line:
+installed / installable / browse-only, where "browse-only" is a mirror entry this source has no
+package for), and downloads, rating and upstream stars.
+
+"Installed" only appears on the entry the ledger recognizes (same source, same slug); a mere name
+collision appends "Name taken". Merging the two would make "overwrite install" read like an update
+when it actually replaces a same-named skill from a different origin.
+
+Switching to the marketplace loads the first page of entries immediately rather than waiting for a
+search click — what people do on that page is look at what is there, not arrive with a name already
+in mind. A blank browse is re-sorted by **total downloads** (popular first, which is what a
+marketplace front page is for); a keyword search keeps the order the marketplace returned, because
+that order is relevance and re-sorting by downloads pushes the best match onto the second screen.
+The result line names whichever one is in force rather than stating a fixed one — a fixed sentence
+would simply be false in one of the two cases.
+
+![The marketplace: categories on the left, search on the right; a card carries its source, how it stands on this machine, the summary, tags and three popularity figures — and no install button](assets/images/skill_market.png)
 
 A marketplace entry gets the same pair of tabs as a local skill: "overview" is the body of its
 SKILL.md, "files" is what the package contains and how big each file is. Both come from **fetching
@@ -308,8 +360,10 @@ anyway — so what is listed is what you would actually get. When it cannot be f
 entries, entries ClawHub forwards to GitHub, an unreachable source) both tabs say why instead of
 raising a failure — someone is looking, not installing.
 
-Below the search box sits a **label grouping** bar: pick one and only entries under it stay. It has
-two possible sources, and only one of them is ever shown:
+Left of the search box sits a **label grouping** bar: pick one and only entries under it stay. The
+two share a row because they are two ways of narrowing the same thing, and stacking them suggests
+you must pick a label before you can search. It has two possible sources, and only one of them is
+ever shown:
 
 - **The marketplace's own label catalog** (SkillHub's `/api/web/labels`). Where it exists, filtering
   by label happens **server-side** and covers the whole marketplace rather than the current page —

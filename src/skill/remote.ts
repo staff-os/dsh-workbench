@@ -49,7 +49,7 @@ import { isScannableTextFile, MAX_SCAN_BYTES, scanFiles } from './scan.ts'
 import type { ScanInput, ScanReport } from './scan.ts'
 import type { FileContent } from './file.ts'
 import { findSkillsInPackage, selectSkillFromPackage } from './package.ts'
-import { decodeUploadedPackage, readPackageBytes } from './source.ts'
+import { classifyImportSource, decodeUploadedPackage, fetchPackage, readPackageBytes } from './source.ts'
 import { forgetInstall, isNewerVersion, readLedger, recordInstall } from './ledger.ts'
 import type { SkillOrigin, UpdateStatus } from './ledger.ts'
 import { readMarketConfig, writeMarketConfig } from './market-config.ts'
@@ -735,6 +735,51 @@ export class WorkbenchSkillGateway extends TypertRemoteService {
     return this.mutated(
       projectLocal(result.skill, false),
       `已${result.replaced ? '覆盖安装' : '安装'}技能 "${result.installedAs}"（来自上传的 ${label}`
+      + `${resources > 0 ? `，含 ${String(resources)} 个资源文件` : ''}`
+      + `${result.binaryCount > 0 ? `，其中 ${String(result.binaryCount)} 个二进制` : ''}）`,
+      result.installedAs,
+    )
+  }
+
+  /**
+   * 从一个下载链接装技能包。
+   *
+   * 与 {@link importPackage} 的区别只有字节从哪来：那条是浏览器把包传上来，
+   * 这条是服务端自己去下。落盘、解包安全检查、以及「不记安装台账」的理由
+   * 都一样——一个任意链接没有 registry 坐标，记一条假的进去，之后的更新检查
+   * 会拿技能名去市场里碰一个同名条目，用不相干的包盖掉用户的东西。
+   *
+   * GitHub 的页面地址在 {@link classifyImportSource} 里被翻成 `/tarball`，
+   * 所以界面上「下载链接」与「GitHub 仓库」是同一个入口的两种说法，不是两条
+   * 实现。传进来的要是个 slug 或本地路径，这里当场拒掉：Remote 是给浏览器
+   * 用的，读服务端盘上的路径不该由浏览器点一下就发生。
+   *
+   * @param url - 包地址，或 GitHub 仓库页面地址。
+   * @param overwrite - 同名已存在时是否覆盖。
+   * @param name - 包里有多个技能时指定装哪一个。
+   * @returns 装好的技能与刷新后的快照。
+   */
+  @Remote('importUrl')
+  async importUrl(url: string, overwrite?: boolean, name?: string): Promise<SkillMutation> {
+    const origin = classifyImportSource(url.trim())
+    if (origin.kind !== 'url') {
+      throw new WorkbenchError(
+        '只收 http(s) 链接：市场条目请用安装，本地压缩包请用上传',
+        'WORKBENCH_BAD_ARG',
+      )
+    }
+    const runtime = this.runtime()
+    const files = await fetchPackage(origin.url, origin.label, runtime.registryTimeoutMs)
+    const picked = selectSkillFromPackage(files, name)
+    const result = await installSkillFiles(
+      { root: this.root(), stagingParent: runtime.paths.skillStaging },
+      picked.files,
+      { overwrite: overwrite === true },
+    )
+    const resources = result.fileCount - 1
+    return this.mutated(
+      projectLocal(result.skill, false),
+      `已${result.replaced ? '覆盖安装' : '安装'}技能 "${result.installedAs}"（来自 ${origin.label}`
       + `${resources > 0 ? `，含 ${String(resources)} 个资源文件` : ''}`
       + `${result.binaryCount > 0 ? `，其中 ${String(result.binaryCount)} 个二进制` : ''}）`,
       result.installedAs,

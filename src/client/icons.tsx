@@ -87,3 +87,73 @@ export function IconFileOutline16({
     </svg>
   )
 }
+
+/**
+ * 一枚盾牌。市场详情里那张「安全审核结论」卡片用它。
+ *
+ * primitives 那套里没有盾——最接近的是 `IconWarningOutline16`，但那是个惊叹
+ * 号三角，摆在「已通过审核」旁边等于把一条好消息说成警告。盾牌本身不表态，
+ * 表态的是它旁边那行字，这正是这张卡要的：结论由源给，图标只说这是「安全」
+ * 这一栏。
+ *
+ * @param props - `size` 是边长，`className` 透传；颜色跟 `currentColor`。
+ * @returns 图标元素。
+ */
+export function IconShieldOutline16({
+  size = 16,
+  className,
+}: {
+  readonly size?: number
+  readonly className?: string | undefined
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden={true}
+    >
+      {/* 盾身：上沿平、两腰内收、底部收成一个尖。 */}
+      <path d="M8 1.9 13 3.5v4.2c0 3-2 5.2-5 6.4-3-1.2-5-3.4-5-6.4V3.5z" />
+    </svg>
+  )
+}
+
+/**
+ * 一颗五角星。市场卡片与详情里的平均评分用它。
+ *
+ * @param props - `size` 是边长，`className` 透传；颜色跟 `currentColor`。
+ * @returns 图标元素。
+ */
+export function IconStarOutline16({
+  size = 16,
+  className,
+}: {
+  readonly size?: number
+  readonly className?: string | undefined
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden={true}
+    >
+      <path d="M8 2.1 9.85 5.9l4.15.6-3 2.94.71 4.15L8 11.63 4.29 13.6 5 9.44 2 6.5l4.15-.6z" />
+    </svg>
+  )
+}

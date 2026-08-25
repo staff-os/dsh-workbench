@@ -461,6 +461,10 @@ export interface SkillRemote {
   importPackage: (
     fileName: string, contentBase64: string, overwrite?: boolean, name?: string,
   ) => Promise<RemoteResult<SkillMutation>>
+  /** 从一个下载链接（含 GitHub 仓库地址）装技能包；字节由服务端去取。 */
+  importUrl: (
+    url: string, overwrite?: boolean, name?: string,
+  ) => Promise<RemoteResult<SkillMutation>>
   marketUpdate: (
     name: string, slug?: string, registry?: string, owner?: string,
   ) => Promise<RemoteResult<SkillMutation>>

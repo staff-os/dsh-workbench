@@ -109,8 +109,13 @@ export class WorkbenchRuntime extends Service {
   /** 凭据解析函数；动态源也要用它。 */
   private readonly resolveApiKey?: (ref: string) => Promise<string | undefined>
 
-  /** 单次市场请求的超时预算。 */
-  private readonly registryTimeoutMs: number
+  /**
+   * 单次市场请求的超时预算。
+   *
+   * 公开的：从链接导入技能包走的是 `fetchPackage` 而不是市场客户端，那条路
+   * 也要一个超时，没有理由再造第二个数。
+   */
+  readonly registryTimeoutMs: number
 
   constructor(ctx: Context, config: WorkbenchRuntimeConfig = {}) {
     super(ctx, 'workbench')

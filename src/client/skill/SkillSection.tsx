@@ -29,18 +29,23 @@ import {
   CodeBlock,
   IconApiOutline14,
   IconArchiveOutline20,
+  IconBranchOutline16,
+  IconCheckOutline16,
   IconChevronDownOutline14,
   IconChevronRightOutline14,
   IconChevronUpOutline14,
   IconDataOutline16,
+  IconDownloadOutline16,
   IconEnhanceOutline16,
   IconFolderClose16,
   IconFolderOpen16,
   IconFolderOpenOutline16,
   IconInspectOutline12,
+  IconLinkOutline16,
   IconListPenOutline16,
   IconPlusOutline16,
   IconRefreshOutline16,
+  IconSearchOutline16,
   IconRightUpOutline14,
   IconTrashOutline16,
   IconUserOutline16,
@@ -51,7 +56,11 @@ import {
   Pill,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ReactNode } from 'react'
-import { IconFileOutline16, IconWrenchOutline16 } from '../icons.tsx'
+import {
+  IconFileOutline16,
+  IconShieldOutline16,
+  IconStarOutline16,
+} from '../icons.tsx'
 import { useStore } from '../state.ts'
 import { ARCHIVE_ACCEPT, MAX_UPLOAD_BYTES } from './data.ts'
 import type { SkillData } from './data.ts'
@@ -172,12 +181,19 @@ interface SkillListProps {
   readonly onOpen: (viewing: Viewing) => void
 }
 
-/** 本机清单与市场的外壳：标题行、分段控件、正文。 */
+/**
+ * 本机清单、市场与市场配置的外壳：标题行、分段控件、正文。
+ *
+ * 标题行上只留「新建」与「导入」两个按钮。原先那五个（搜索框、重新读取、
+ * 查更新、全部更新、上传、新建）挤成一排，谁也不比谁显眼，而其中大半只跟
+ * 本机清单有关——它们现在归到清单自己的工具条上，标题行只回答「从哪来一份
+ * 新技能」这一件事。
+ */
 function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
   const state = useStore(data.store)
   const [keyword, setKeyword] = useState('')
   const [creating, setCreating] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   const skills = state.snapshot?.skills ?? []
   const rejected = state.snapshot?.rejected ?? []
@@ -197,67 +213,16 @@ function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
           <h1 className={css.title}>{t('section.skills')}</h1>
           <p className={css.subtitle}>{t('skill.subtitle')}</p>
         </div>
-        {tab === 'local' && (
+        {/*
+          这两个按钮写着字而不是只放一个图标：光看图标说不出它们干什么，
+          而 primitives 的 Button 收不到 Tooltip 往下传的 hover 句柄
+          （侧栏那种原生 button 才收得到），所以移上去也没有提示可看。
+
+          导入排在新建后面并且是主按钮：装一个现成的包是这一页最常做的事，
+          从零写一份 SKILL.md 是少数情况。
+        */}
+        {tab !== 'config' && (
           <div className={css.headActions}>
-            <Input
-              className={clsx(css.search)}
-              value={keyword}
-              placeholder={t('skill.search')}
-              aria-label={t('skill.search')}
-              onChange={(event) => { setKeyword(event.target.value) }}
-            />
-            {/*
-              这两个按钮写着字而不是只放一个图标：光看图标说不出它们干什么，
-              而 primitives 的 Button 收不到 Tooltip 往下传的 hover 句柄
-              （侧栏那种原生 button 才收得到），所以移上去也没有提示可看。
-            */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={state.busy}
-              icon={<IconRefreshOutline16 size={16} />}
-              onClick={() => { void data.refresh() }}
-            >
-              {t('skill.refresh')}
-            </Button>
-            {/*
-              「查更新」要走网络问每个源，比刷新本地清单慢得多，所以是单独一个
-              按钮而不是并进刷新里——刷新是这一页最常按的东西，不该每次都等一
-              轮市场往返。
-            */}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={state.busy || state.updatesLoading}
-              icon={<IconEnhanceOutline16 size={16} />}
-              onClick={() => { void data.checkUpdates() }}
-            >
-              {t(state.updatesLoading ? 'skill.updates.checking' : 'skill.updates.check')}
-            </Button>
-            {outdated.length > 0 && (
-              <Button
-                variant="primary"
-                size="sm"
-                icon={<IconRefreshOutline16 size={16} />}
-                disabled={state.busy}
-                onClick={() => { void data.updateAll() }}
-              >
-                {t('skill.updates.all').replace('{n}', String(outdated.length))}
-              </Button>
-            )}
-            {/*
-              上传排在新建前面：装一个现成的包是这一页最常做的事，从零写一份
-              SKILL.md 是少数情况。
-            */}
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<IconArchiveOutline20 size={16} />}
-              disabled={state.busy}
-              onClick={() => { setUploading(true) }}
-            >
-              {t('skill.upload')}
-            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -266,6 +231,15 @@ function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
               onClick={() => { setCreating(true) }}
             >
               {t('skill.create')}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<IconArchiveOutline20 size={16} />}
+              disabled={state.busy}
+              onClick={() => { setImporting(true) }}
+            >
+              {t('skill.import')}
             </Button>
           </div>
         )}
@@ -294,68 +268,133 @@ function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
           ? <MarketConfigPanel data={data} t={t} />
           : (
             <div className={css.body}>
-            {/* 没有技能服务时这份清单只是目录列表，「生效」「被遮蔽」都无从谈起。 */}
-            {state.snapshot?.hasRegistry === false && (
-              <p className={css.banner}>{t('skill.noRegistry')}</p>
-            )}
-            {/*
-              被 DSH 拒收的文件。放在清单**之前**而不是折在底下：它们的症状是
-              「我装了却调不到」，而人来这一页多半就是为了查这件事。
-            */}
-            {rejected.length > 0 && (
-              <div className={css.banner}>
-                <p>{t('skill.rejected.title').replace('{n}', String(rejected.length))}</p>
-                <p>{t('skill.rejected.hint')}</p>
-                <ul>
-                  {rejected.map(entry => (
-                    <li key={entry.path}>
-                      <code>{entry.hint}</code>
-                      {' — '}
-                      {entry.reason}
-                    </li>
-                  ))}
-                </ul>
+              {/*
+                清单自己的工具条：左边搜，右边是三件只跟这份清单有关的事。
+                「查更新」要走网络问每个源，比刷新本地清单慢得多，所以是单独
+                一个按钮而不是并进刷新里——刷新是这一页最常按的东西，不该每次
+                都等一轮市场往返。
+              */}
+              <div className={css.toolBar}>
+                <label className={css.searchPill}>
+                  <IconSearchOutline16 size={15} className={css.searchMark} />
+                  <input
+                    className={css.searchInput}
+                    value={keyword}
+                    placeholder={t('skill.search')}
+                    aria-label={t('skill.search')}
+                    onChange={(event) => { setKeyword(event.target.value) }}
+                  />
+                </label>
+                <div className={css.toolBarActions}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={state.busy}
+                    icon={<IconRefreshOutline16 size={16} />}
+                    onClick={() => { void data.refresh() }}
+                  >
+                    {t('skill.refresh')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={state.busy || state.updatesLoading}
+                    icon={<IconEnhanceOutline16 size={16} />}
+                    onClick={() => { void data.checkUpdates() }}
+                  >
+                    {t(state.updatesLoading ? 'skill.updates.checking' : 'skill.updates.check')}
+                  </Button>
+                  {outdated.length > 0 && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<IconRefreshOutline16 size={16} />}
+                      disabled={state.busy}
+                      onClick={() => { void data.updateAll() }}
+                    >
+                      {t('skill.updates.all').replace('{n}', String(outdated.length))}
+                    </Button>
+                  )}
+                </div>
               </div>
-            )}
-            {state.updatesLoading && <p className={css.banner}>{t('skill.updates.checking')}</p>}
-            {outdated.length > 0 && (
-              <p className={css.banner}>
-                {t('skill.updates.available').replace('{n}', String(outdated.length))}
-                {'：'}
-                {outdated.map(status => `${status.name} ${status.installed} → ${status.latest ?? '?'}`).join('、')}
-              </p>
-            )}
-            {/*
-              查更新失败的那些单独说一句。台账里记着来源、但源现在不可达时，
-              界面上的表现是「它就是最新的」——那是一个安静的谎。
-            */}
-            {unchecked.length > 0 && (
-              <p className={css.banner}>
-                {t('skill.updates.unchecked').replace('{n}', String(unchecked.length))}
-                {'：'}
-                {unchecked.map(status => `${status.name}（${status.error ?? '?'}）`).join('；')}
-              </p>
-            )}
-            {state.loading
-              ? <p className={css.empty}>{t('skill.loading')}</p>
-              : shown.length === 0
-                ? <p className={css.empty}>{needle === '' ? t('skill.none') : t('skill.noMatch')}</p>
-                : (
-                  <ul className={css.grid}>
-                    {shown.map(skill => (
-                      <li key={`${skill.source}:${skill.name}`}>
-                        <SkillCard
-                          skill={skill}
-                          update={state.updates?.get(skill.name)}
-                          t={t}
-                          onOpen={() => { onOpen({ kind: 'local', name: skill.name }) }}
-                        />
+
+              {/*
+                一行数字，说清这份清单里都有些什么。被遮蔽与被拒收这两个数
+                即使是 0 也照样报出来——它们是这一域最容易让人白忙的两件事，
+                只在非零时才出现的话，人不会知道界面替他查过。
+              */}
+              <p className={css.resultLine}>{localSummary(skills, rejected.length, t)}</p>
+
+              {/* 没有技能服务时这份清单只是目录列表，「生效」「被遮蔽」都无从谈起。 */}
+              {state.snapshot?.hasRegistry === false && (
+                <p className={css.banner}>{t('skill.noRegistry')}</p>
+              )}
+              {state.updatesLoading && <p className={css.banner}>{t('skill.updates.checking')}</p>}
+              {outdated.length > 0 && (
+                <p className={css.banner}>
+                  {t('skill.updates.available').replace('{n}', String(outdated.length))}
+                  {'：'}
+                  {outdated.map(status => `${status.name} ${status.installed} → ${status.latest ?? '?'}`).join('、')}
+                </p>
+              )}
+              {/*
+                查更新失败的那些单独说一句。台账里记着来源、但源现在不可达时，
+                界面上的表现是「它就是最新的」——那是一个安静的谎。
+              */}
+              {unchecked.length > 0 && (
+                <p className={css.banner}>
+                  {t('skill.updates.unchecked').replace('{n}', String(unchecked.length))}
+                  {'：'}
+                  {unchecked.map(status => `${status.name}（${status.error ?? '?'}）`).join('；')}
+                </p>
+              )}
+
+              {state.loading
+                ? <p className={css.empty}>{t('skill.loading')}</p>
+                : shown.length === 0
+                  ? <p className={css.empty}>{needle === '' ? t('skill.none') : t('skill.noMatch')}</p>
+                  : (
+                    <ul className={css.rows}>
+                      {shown.map(skill => (
+                        <li key={`${skill.source}:${skill.name}`}>
+                          <SkillRow
+                            skill={skill}
+                            update={state.updates?.get(skill.name)}
+                            busy={state.busy}
+                            t={t}
+                            onOpen={() => { onOpen({ kind: 'local', name: skill.name }) }}
+                            onUpdate={() => { void data.update(skill.name) }}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+              {/*
+                被 DSH 拒收的文件。它们不是上面那份清单折起来的一部分，而是
+                另一种东西：盘上有、但 DSH 整份丢弃，只留一行日志。顶上那行
+                数字已经报过有几个，这里逐条说清是哪一个、为什么。
+              */}
+              {rejected.length > 0 && (
+                <section className={css.rejected}>
+                  <h2 className={css.rejectedTitle}>{t('skill.rejected.section')}</h2>
+                  <p className={css.rejectedHint}>{t('skill.rejected.sectionHint')}</p>
+                  <ul className={css.rejectedList}>
+                    {rejected.map(entry => (
+                      <li key={entry.path} className={css.rejectedRow}>
+                        <IconWarningOutline16 size={16} className={css.rejectedMark} />
+                        <span className={css.rejectedMain}>
+                          <span className={css.rejectedName}>{entry.hint}</span>
+                          <span className={css.rejectedPath}>{entry.path}</span>
+                        </span>
+                        <span className={css.rejectedReason}>{entry.reason}</span>
                       </li>
                     ))}
                   </ul>
-                )}
-          </div>
-        )}
+                </section>
+              )}
+            </div>
+          )}
 
       <CreateDialog
         open={creating}
@@ -364,63 +403,163 @@ function SkillList({ data, t, tab, onTab, onOpen }: SkillListProps) {
         onClose={() => { setCreating(false) }}
         onCreated={(name) => { setCreating(false); onOpen({ kind: 'local', name }) }}
       />
-      <UploadDialog
-        open={uploading}
+      <ImportDialog
+        open={importing}
         data={data}
         t={t}
-        onClose={() => { setUploading(false) }}
+        onClose={() => { setImporting(false) }}
       />
     </div>
   )
 }
 
 /**
- * 一张技能卡片。
+ * 已装清单顶上那一行数字。
  *
- * 「已安装 vX」只挂在**台账里有记录**的技能上，也就是从市场装来的那些。
- * 手写的技能同样在盘上、同样生效，但它没有上游版本可言，给它挂一个版本号
- * 是无中生有。
+ * 「受本插件管理」数的是用户目录里、且没被遮蔽的那些——只有它们在这个界面上
+ * 改得动。项目级与随插件发布的技能照样生效、照样列出来，但它们不归这里管，
+ * 混进同一个数里会让人以为界面能改。
+ *
+ * @param skills - 当前快照里的全部技能。
+ * @param rejectedCount - 被 DSH 拒收的文件数。
+ * @param t - 翻译函数。
+ * @returns 一行用「·」串起来的说明。
  */
-function SkillCard({ skill, update, t, onOpen }: {
+function localSummary(
+  skills: readonly SkillView[],
+  rejectedCount: number,
+  t: Translate,
+): string {
+  const managed = skills.filter(skill => skill.managed && !skill.shadowed).length
+  const shadowed = skills.filter(skill => skill.shadowed).length
+  return [
+    t('skill.local.count').replace('{n}', String(skills.length)),
+    t('skill.local.managed').replace('{n}', String(managed)),
+    t('skill.local.shadowed').replace('{n}', String(shadowed)),
+    t('skill.local.rejectedCount').replace('{n}', String(rejectedCount)),
+  ].join(' · ')
+}
+
+/** 方牌的配色档数；`glyph0`…`glyph5` 在样式表里。 */
+const TILE_TONES = 6
+
+/**
+ * 一个名字落在哪一档方牌配色上。
+ *
+ * 按名字的码点和取模，而不是按它在列表里的下标：同一个技能在市场页与已装
+ * 清单里下标不同，按下标算的话同一件东西会换颜色，看着像两个。
+ *
+ * @param name - 技能名或 slug。
+ * @returns `0` 到 `TILE_TONES - 1`。
+ */
+function toneOf(name: string): number {
+  let sum = 0
+  for (const ch of name) sum += ch.codePointAt(0) ?? 0
+  return sum % TILE_TONES
+}
+
+/**
+ * 方牌上那个字。
+ *
+ * 按码点切而不是 `name[0]`：后者切的是 UTF-16 码元，遇到 emoji 或增补平面的
+ * 汉字会切出半个字符，渲染成一个替换符。
+ *
+ * @param name - 技能名。
+ * @returns 头一个字符，拉丁字母转大写。
+ */
+function initialOf(name: string): string {
+  return [...name][0]?.toUpperCase() ?? '·'
+}
+
+/**
+ * 已装清单里的一行。
+ *
+ * 做成横排而不是卡片：这份清单要回答的是「盘上现在有什么、它生没生效、
+ * 调不调得到」，这些都是逐项对齐着看的事实，网格卡片会把同一列的事实错开。
+ *
+ * 一行里从左到右是四件事，顺序就是人查这一页的顺序：**是谁**（方牌与名字）、
+ * **在哪**（来源与路径）、**怎么调**（模型可调用 / 斜杠触发两个开关状态）、
+ * **要不要动它**（有新版时才出现的更新按钮）。
+ *
+ * 「已安装 vX」不挂在这里：那个版本号只有**台账里有记录**的技能才有，也就是
+ * 从市场装来的那些。手写的技能同样在盘上、同样生效，但它没有上游版本可言，
+ * 给它挂一个版本号是无中生有。
+ */
+function SkillRow({ skill, update, busy, t, onOpen, onUpdate }: {
   readonly skill: SkillView
   /** 这个技能的更新状态；手写的技能没有。 */
   readonly update?: UpdateStatus | undefined
+  readonly busy: boolean
   readonly t: Translate
   readonly onOpen: () => void
+  readonly onUpdate: () => void
 }) {
+  const outdated = update?.outdated === true
   return (
-    <button type="button" className={css.card} aria-label={skill.name} onClick={onOpen}>
-      <span className={css.cardMark} aria-hidden="true">
-        <IconWrenchOutline16 size={18} />
-      </span>
-      <span className={css.cardMain}>
-        <span className={css.cardTitle}>
-          <span className={css.cardName}>{skill.name}</span>
-          {update !== undefined && (
-            <Pill className={clsx(css.tag)}>
-              {`${t('skill.installed')} v${update.installed}`}
-            </Pill>
-          )}
-          {update?.outdated === true && (
-            <Pill className={clsx(css.tag, css.tagWarn)}>
-              {`${t('skill.updates.newer')} v${update.latest ?? '?'}`}
-            </Pill>
-          )}
+    <div className={css.row}>
+      {/*
+        可点的是左边这一整块，不是整行：右边那截里有更新按钮，套在一个大按钮
+        里就是按钮套按钮——HTML 不合法，点更新还会连带把详情页也打开。
+      */}
+      <button type="button" className={css.rowOpen} aria-label={skill.name} onClick={onOpen}>
+        <span className={clsx(css.glyph, css.glyphSm, css[`glyph${String(toneOf(skill.name))}`])} aria-hidden="true">
+          {initialOf(skill.name)}
+        </span>
+        <span className={css.rowMain}>
+          <span className={css.rowTitle}>
+            <span className={css.rowName}>{skill.name}</span>
+            <span className={css.rowSource}>{skill.source}</span>
+            {/*
+              遮蔽是这一域最容易让人白忙的事：改它、更新它、甚至重装它都不会
+              有任何效果。所以这里是一条写着「不生效」的角标，而不是一个只说
+              「被遮蔽」的中性标签——后者读起来像一种状态，不像一句结论。
+            */}
+            {skill.shadowed && (
+              <span className={clsx(css.badge, css.badgeWarn)}>
+                <IconWarningOutline16 size={12} />
+                {t('skill.tag.shadowed.long')}
+              </span>
+            )}
+            {outdated && (
+              <span className={clsx(css.badge, css.badgeGood)}>
+                {`${t('skill.updates.newer')} v${update?.latest ?? '?'}`}
+              </span>
+            )}
+            {!skill.managed && <span className={css.badge}>{t('skill.tag.readonly')}</span>}
+          </span>
+          <span className={css.rowPath}>{skill.path ?? skill.source}</span>
           {skill.shadowed && (
-            <Pill className={clsx(css.tag, css.tagWarn)}>{t('skill.tag.shadowed')}</Pill>
+            <span className={css.rowNote}>
+              {t('skill.shadowed.hint').replace('{source}', skill.source)}
+            </span>
           )}
-          {!skill.managed && <Pill className={clsx(css.tag)}>{t('skill.tag.readonly')}</Pill>}
         </span>
-        <span className={css.cardId}>{skill.source}</span>
-        <span className={css.cardDesc}>{skill.description}</span>
-        <span className={css.cardFacts}>
-          {!skill.modelInvocable && <span className={css.fact}>{t('skill.tag.modelOff')}</span>}
-          {!skill.userInvocable && <span className={css.fact}>{t('skill.tag.userOff')}</span>}
-          {skill.provider !== undefined && <span className={css.fact}>{skill.provider}</span>}
-          {update !== undefined && <span className={css.fact}>{update.origin.registry}</span>}
+      </button>
+
+      <div className={css.rowSide}>
+        {/*
+          两个开关状态都画出来，关掉的那个压暗而不是撤掉。只画开着的那个的话，
+          「这个技能不能被模型自己调用」与「界面忘了说」在屏幕上长得一样。
+        */}
+        <span className={clsx(css.stateChip, !skill.modelInvocable && css.stateChipOff)}>
+          {t('skill.tag.modelOn')}
         </span>
-      </span>
-    </button>
+        <span
+          className={clsx(
+            css.stateChip,
+            css.stateChipMono,
+            !skill.userInvocable && css.stateChipOff,
+          )}
+        >
+          {`/${skill.name}`}
+        </span>
+        {outdated && (
+          <Button variant="primary" size="sm" disabled={busy} onClick={onUpdate}>
+            {t('skill.market.update')}
+          </Button>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -765,12 +904,11 @@ function MarketDetail({ slug, registry, data, t, onBack }: {
                   {status === undefined && taken && (
                     <Pill className={clsx(css.tag, css.tagWarn)}>{t('skill.market.sameName')}</Pill>
                   )}
-                  {item.securityStatus !== undefined && (
-                    <Pill className={clsx(css.tag, css.tagWarn)}>{item.securityStatus}</Pill>
-                  )}
-                  {item.installKind !== undefined && (
-                    <Pill className={clsx(css.tag)}>{item.installKind}</Pill>
-                  )}
+                  {/*
+                    审核结论与托管方式不在这一排：前者归右栏那张安全卡（那串字
+                    是源给的自由文本，涂成 warn 色等于替它下结论），后者归事实行。
+                    这一排只放「它是哪个版本、在本机是什么处境」。
+                  */}
                 </div>
 
                 <h1 className={css.detailTitle}>{item.name}</h1>
@@ -843,33 +981,32 @@ function MarketDetail({ slug, registry, data, t, onBack }: {
 
         {item !== undefined && (
           <aside className={css.detailAside}>
-            <div className={css.factCard}>
-              {item.version !== undefined && (
-                <FactRow label={t('skill.market.version')}>{`v${item.version}`}</FactRow>
-              )}
-              <FactRow label={t('skill.detail.registry')}>{item.registryName}</FactRow>
-              {item.owner !== undefined && (
-                <FactRow label={t('skill.market.owner')}>{item.owner}</FactRow>
-              )}
-              <FactRow label={t('skill.market.downloadCount')}>
-                {formatCount(item.downloadCount)}
-              </FactRow>
-              {item.installCount > 0 && (
-                <FactRow label={t('skill.market.installCount')}>
-                  {formatCount(item.installCount)}
-                </FactRow>
-              )}
-              {item.stars > 0 && (
-                <FactRow label={t('skill.market.starCount')}>{formatCount(item.stars)}</FactRow>
-              )}
-              {item.securityStatus !== undefined && (
-                <FactRow label={t('skill.detail.security')}>{item.securityStatus}</FactRow>
-              )}
-              <div className={css.factBlock}>
-                <span className={css.factTitle}>{t('skill.market.install')}</span>
-                <code className={clsx(css.factValue, css.factMono)}>
-                  {item.owner === undefined ? item.slug : `${item.owner}/${item.slug}`}
-                </code>
+            {/*
+              安全审核结论顶在这一栏最上面，在安装按钮之前。
+
+              装一个技能不是装一个库：SKILL.md 的正文是模型会照着执行的一段
+              指令。所以这一栏的顺序是「这东西可信吗 → 要不要装」，而不是把
+              审核结论混进下面那堆事实行里，让它和「下载量」一样重。
+
+              源不给这个字段时照实说「不提供」，不写「未通过」也不留空：空着
+              会被读成「没问题」，而这里根本没有人下过结论。
+            */}
+            <div className={css.securityCard}>
+              <IconShieldOutline16 size={17} className={css.securityMark} />
+              <div className={css.securityText}>
+                <span
+                  className={clsx(
+                    css.securityTitle,
+                    item.securityStatus === undefined && css.securityUnknown,
+                  )}
+                >
+                  {item.securityStatus ?? t('skill.market.security.unknown')}
+                </span>
+                <span className={css.securityNote}>
+                  {t(item.securityStatus === undefined
+                    ? 'skill.market.security.unknownNote'
+                    : 'skill.market.security.note')}
+                </span>
               </div>
             </div>
 
@@ -916,6 +1053,53 @@ function MarketDetail({ slug, registry, data, t, onBack }: {
                 </div>
               </div>
             </div>
+
+            {/*
+              三格数字。它们在卡片上已经出现过一次，这里再摆一遍是因为详情页
+              是最终下决定的地方，翻回列表去对数字是白翻一趟。
+            */}
+            <div className={css.statGrid}>
+              <div className={css.stat}>
+                <span className={css.statValue}>{formatCount(item.downloadCount)}</span>
+                <span className={css.statLabel}>{t('skill.market.downloadCount')}</span>
+              </div>
+              <div className={css.stat}>
+                <span className={css.statValue}>
+                  {item.avgRating > 0 ? item.avgRating.toFixed(1) : '—'}
+                </span>
+                <span className={css.statLabel}>{t('skill.market.rating')}</span>
+              </div>
+              <div className={css.stat}>
+                <span className={css.statValue}>
+                  {item.stars > 0 ? formatCount(item.stars) : '—'}
+                </span>
+                <span className={css.statLabel}>{t('skill.market.starCount')}</span>
+              </div>
+            </div>
+
+            <div className={css.factCard}>
+              {item.version !== undefined && (
+                <FactRow label={t('skill.market.version')}>{`v${item.version}`}</FactRow>
+              )}
+              <FactRow label={t('skill.detail.registry')}>{item.registryName}</FactRow>
+              {item.owner !== undefined && (
+                <FactRow label={t('skill.market.owner')}>{item.owner}</FactRow>
+              )}
+              {item.installKind !== undefined && (
+                <FactRow label={t('skill.market.installKind')}>{item.installKind}</FactRow>
+              )}
+              {item.installCount > 0 && (
+                <FactRow label={t('skill.market.installCount')}>
+                  {formatCount(item.installCount)}
+                </FactRow>
+              )}
+              <div className={css.factBlock}>
+                <span className={css.factTitle}>{t('skill.market.install')}</span>
+                <code className={clsx(css.factValue, css.factMono)}>
+                  {item.owner === undefined ? item.slug : `${item.owner}/${item.slug}`}
+                </code>
+              </div>
+            </div>
           </aside>
         )}
       </div>
@@ -931,7 +1115,7 @@ function MarketDetail({ slug, registry, data, t, onBack }: {
   )
 }
 
-/** 市场页：浏览、搜索与安装。 */
+/** 市场页：浏览、筛选与挑一条看详情。 */
 function MarketPanel({ data, t, onOpen }: {
   readonly data: SkillData
   readonly t: Translate
@@ -939,6 +1123,14 @@ function MarketPanel({ data, t, onOpen }: {
 }) {
   const state = useStore(data.store)
   const [keyword, setKeyword] = useState('')
+  /**
+   * 上一次真正发给市场的那个关键词。
+   *
+   * 与 `keyword` 分开记，因为排序要看它：留空浏览时这一页按下载量重排（热门
+   * 的在前，这也是人打开市场首页想看到的），而带关键词搜出来的那一批得保持
+   * 市场给的次序——那是相关度，按下载量重排会把最贴题的一条压到第二屏去。
+   */
+  const [submitted, setSubmitted] = useState('')
   const [picked, setPicked] = useState<string | undefined>(undefined)
   const [label, setLabel] = useState<MarketLabel | undefined>(undefined)
   const [expanded, setExpanded] = useState(false)
@@ -954,15 +1146,20 @@ function MarketPanel({ data, t, onOpen }: {
   // 换了一批结果之后，原来选的那个分类可能已经不在了。这里按「不在就当没选」
   // 处理，而不是留一个选中却过滤掉全部结果的死状态。
   const active = facets.some(facet => facet.key === picked) ? picked : undefined
-  const shown = active === undefined
+  const filtered = active === undefined
     ? items ?? []
     : (items ?? []).filter(item => facetsOf(item).some(one => normalizeLabel(one) === active))
+  const byDownloads = submitted === ''
+  const shown = byDownloads
+    ? [...filtered].sort((a, b) => b.downloadCount - a.downloadCount)
+    : filtered
 
   // 市场自己的标签目录。有它就用它分组——按标签筛是服务端做的，覆盖整个市场；
   // 没有才退回下面那套从当前这批结果里数出来的分类。
   const labels = state.labels ?? []
 
   const run = (next?: MarketLabel | undefined): void => {
+    setSubmitted(keyword.trim())
     void data.search(keyword, undefined, undefined, next?.slug, next?.registry)
   }
 
@@ -984,24 +1181,145 @@ function MarketPanel({ data, t, onOpen }: {
 
   return (
     <div className={css.body}>
+      {/*
+        一条工具条：左边是筛选用的分类，右边是搜。两者摆在同一行，因为它们是
+        同一件事的两种收窄方式，分成上下两条会让人以为要先选一个再搜。
+      */}
       <div className={css.marketBar}>
-        <Input
-          className={clsx(css.marketSearch)}
-          value={keyword}
-          placeholder={t('skill.market.search')}
-          aria-label={t('skill.market.search')}
-          onChange={(event) => { setKeyword(event.target.value) }}
-          onKeyDown={(event) => { if (event.key === 'Enter') run(label) }}
-        />
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={state.marketLoading}
-          onClick={() => { run(label) }}
-        >
-          {t('skill.market.go')}
-        </Button>
+        <div className={css.facetRow}>
+          {/*
+            市场自己的标签目录。与下面那条分类筛选的区别要紧：这一条是**服务端**
+            筛的，点一个标签得到的是整个市场里归在它下面的条目；那一条只在已经
+            取回来的这一批结果里筛。两条同时摆会让人以为是一回事，所以有标签就
+            只摆标签这一条。
+          */}
+          {labels.length > 0 && (
+            <>
+              <button
+                type="button"
+                className={clsx(css.facet, label === undefined && css.facetActive)}
+                onClick={() => { setLabel(undefined); setPicked(undefined); run(undefined) }}
+              >
+                {t('skill.market.filter.all')}
+              </button>
+              {labels
+                .filter((one, index) => expanded || index < FACET_LIMIT || one.slug === label?.slug)
+                .map(one => (
+                  <button
+                    key={`${one.registry}:${one.slug}`}
+                    type="button"
+                    className={clsx(
+                      css.facet,
+                      one.kind === 'PRIVILEGED' && css.facetMark,
+                      label?.slug === one.slug && label.registry === one.registry && css.facetActive,
+                    )}
+                    onClick={() => {
+                      const next = label?.slug === one.slug && label.registry === one.registry
+                        ? undefined
+                        : one
+                      setLabel(next)
+                      setPicked(undefined)
+                      run(next)
+                    }}
+                  >
+                    {one.name}
+                  </button>
+                ))}
+              {labels.length > FACET_LIMIT && (
+                <button
+                  type="button"
+                  className={clsx(css.facet, css.facetMore)}
+                  onClick={() => { setExpanded(!expanded) }}
+                >
+                  {expanded
+                    ? t('skill.market.filter.less')
+                    : t('skill.market.filter.more').replace('{n}', String(labels.length - FACET_LIMIT))}
+                </button>
+              )}
+            </>
+          )}
+
+          {labels.length === 0 && facets.length > 0 && (
+            <>
+              <button
+                type="button"
+                className={clsx(css.facet, active === undefined && css.facetActive)}
+                onClick={() => { setPicked(undefined) }}
+              >
+                {`${t('skill.market.filter.all')} (${String(items?.length ?? 0)})`}
+              </button>
+              {/*
+                上游的标签相当零散——一批 40 条里能数出三十几个分类，大半只挂着
+                一条。全摆出来就是一堵墙，所以默认只留最靠前的那些；选中的那个
+                即使排在后面也要留着，否则点完它自己就消失了。
+              */}
+              {facets
+                .filter((facet, index) => expanded || index < FACET_LIMIT || facet.key === active)
+                .map(facet => (
+                  <button
+                    key={facet.key}
+                    type="button"
+                    className={clsx(css.facet, active === facet.key && css.facetActive)}
+                    onClick={() => { setPicked(active === facet.key ? undefined : facet.key) }}
+                  >
+                    {`${facet.label} (${String(facet.count)})`}
+                  </button>
+                ))}
+              {facets.length > FACET_LIMIT && (
+                <button
+                  type="button"
+                  className={clsx(css.facet, css.facetMore)}
+                  onClick={() => { setExpanded(!expanded) }}
+                >
+                  {expanded
+                    ? t('skill.market.filter.less')
+                    : t('skill.market.filter.more').replace('{n}', String(facets.length - FACET_LIMIT))}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className={css.marketSearchGroup}>
+          <label className={css.searchPill}>
+            <IconSearchOutline16 size={15} className={css.searchMark} />
+            <input
+              className={css.searchInput}
+              value={keyword}
+              placeholder={t('skill.market.search')}
+              aria-label={t('skill.market.search')}
+              onChange={(event) => { setKeyword(event.target.value) }}
+              onKeyDown={(event) => { if (event.key === 'Enter') run(label) }}
+            />
+          </label>
+          {/*
+            回车能搜，按钮也留着：这一下是一次网络往返，不是就地过滤，没有一个
+            看得见的触发点的话，人会以为自己打的字已经在筛了。
+          */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={state.marketLoading}
+            onClick={() => { run(label) }}
+          >
+            {t('skill.market.go')}
+          </Button>
+        </div>
       </div>
+
+      {/*
+        一行说清这批结果是什么、从哪来、按什么排。排序那一句会跟着变——留空
+        浏览时是按下载量重排的，带关键词时是市场给的次序，混成一句固定的话，
+        其中一种情况下它就是假的。
+      */}
+      <p className={css.resultLine}>
+        {[
+          t('skill.market.resultLine')
+            .replace('{n}', String(shown.length))
+            .replace('{m}', String(registries.length)),
+          t(byDownloads ? 'skill.market.sortedByDownloads' : 'skill.market.sortedByRelevance'),
+        ].join(' · ')}
+      </p>
 
       {registries.length > 0 && (
         <p className={css.hint}>
@@ -1010,105 +1328,14 @@ function MarketPanel({ data, t, onOpen }: {
       )}
 
       {/*
-        市场自己的标签目录。与下面那条分类筛选的区别要紧：这一条是**服务端**
-        筛的，点一个标签得到的是整个市场里归在它下面的条目；那一条只在已经取
-        回来的这一批结果里筛。两条同时摆会让人以为是一回事，所以有标签就只摆
-        标签这一条。
+        分类是从**已载入的这一批**结果里数出来的，不是市场的目录——
+        ClawHub 兼容契约里没有分类端点。不说清这一条，选中一个分类之后
+        看到的三条会被当成「整个市场只有三条」。
       */}
-      {labels.length > 0 && (
-        <div className={css.facetRow}>
-          <button
-            type="button"
-            className={clsx(css.facet, label === undefined && css.facetActive)}
-            onClick={() => { setLabel(undefined); setPicked(undefined); run(undefined) }}
-          >
-            {t('skill.market.filter.all')}
-          </button>
-          {labels
-            .filter((one, index) => expanded || index < FACET_LIMIT || one.slug === label?.slug)
-            .map(one => (
-              <button
-                key={`${one.registry}:${one.slug}`}
-                type="button"
-                className={clsx(
-                  css.facet,
-                  one.kind === 'PRIVILEGED' && css.facetMark,
-                  label?.slug === one.slug && label.registry === one.registry && css.facetActive,
-                )}
-                onClick={() => {
-                  const next = label?.slug === one.slug && label.registry === one.registry
-                    ? undefined
-                    : one
-                  setLabel(next)
-                  setPicked(undefined)
-                  run(next)
-                }}
-              >
-                {one.name}
-              </button>
-            ))}
-          {labels.length > FACET_LIMIT && (
-            <button
-              type="button"
-              className={clsx(css.facet, css.facetMore)}
-              onClick={() => { setExpanded(!expanded) }}
-            >
-              {expanded
-                ? t('skill.market.filter.less')
-                : t('skill.market.filter.more').replace('{n}', String(labels.length - FACET_LIMIT))}
-            </button>
-          )}
-        </div>
-      )}
-
       {labels.length === 0 && facets.length > 0 && (
-        <>
-          <div className={css.facetRow}>
-            <button
-              type="button"
-              className={clsx(css.facet, active === undefined && css.facetActive)}
-              onClick={() => { setPicked(undefined) }}
-            >
-              {`${t('skill.market.filter.all')} (${String(items?.length ?? 0)})`}
-            </button>
-            {/*
-              上游的标签相当零散——一批 40 条里能数出三十几个分类，大半只挂着
-              一条。全摆出来就是一堵墙，所以默认只留最靠前的那些；选中的那个
-              即使排在后面也要留着，否则点完它自己就消失了。
-            */}
-            {facets
-              .filter((facet, index) => expanded || index < FACET_LIMIT || facet.key === active)
-              .map(facet => (
-                <button
-                  key={facet.key}
-                  type="button"
-                  className={clsx(css.facet, active === facet.key && css.facetActive)}
-                  onClick={() => { setPicked(active === facet.key ? undefined : facet.key) }}
-                >
-                  {`${facet.label} (${String(facet.count)})`}
-                </button>
-              ))}
-            {facets.length > FACET_LIMIT && (
-              <button
-                type="button"
-                className={clsx(css.facet, css.facetMore)}
-                onClick={() => { setExpanded(!expanded) }}
-              >
-                {expanded
-                  ? t('skill.market.filter.less')
-                  : t('skill.market.filter.more').replace('{n}', String(facets.length - FACET_LIMIT))}
-              </button>
-            )}
-          </div>
-          {/*
-            分类是从**已载入的这一批**结果里数出来的，不是市场的目录——
-            ClawHub 兼容契约里没有分类端点。不说清这一条，选中一个分类之后
-            看到的三条会被当成「整个市场只有三条」。
-          */}
-          <p className={css.hint}>
-            {t('skill.market.filter.scope').replace('{n}', String(items?.length ?? 0))}
-          </p>
-        </>
+        <p className={css.hint}>
+          {t('skill.market.filter.scope').replace('{n}', String(items?.length ?? 0))}
+        </p>
       )}
 
       {state.marketError !== undefined && <ErrorLine text={state.marketError} />}
@@ -1127,12 +1354,8 @@ function MarketPanel({ data, t, onOpen }: {
                     <MarketCard
                       item={item}
                       t={t}
-                      busy={state.busy}
                       install={installOf(item, installed, state.updates)}
                       onOpen={() => { onOpen({ kind: 'market', slug: item.slug, registry: item.registry }) }}
-                      onInstall={(overwrite) => {
-                        void data.install(item.slug, item.version, item.registry, overwrite, item.owner)
-                      }}
                     />
                   </li>
                 ))}
@@ -1145,92 +1368,94 @@ function MarketPanel({ data, t, onOpen }: {
 /**
  * 一张市场卡片。
  *
- * 三件事必须显示在按钮旁边，而不是藏进详情：
+ * 整张卡是一个按钮，点进去是详情——卡片上**没有安装按钮**。这是刻意的：技能
+ * 装上去就是模型会照着执行的一段指令，而一张卡片放不下决定要不要装它所需的
+ * 东西（谁发布的、平台给没给审核结论、包里有什么、静态扫描命中了什么）。让
+ * 「装」这一下只能在看过那些之后按，比在网格里一路点下去安全。
  *
- * - **发布者**：ClawHub 上不同发布者可以用同一个 slug，光看名字分不清装的是谁的。
- * - **安全审核结论**：技能装上去就是模型会照着执行的指令。
- * - **装不装得了**：搜索结果里混着别家目录的镜像条目，它们在这个源上没有包。
- *   按钮直接禁用并说明，比让人点下去收一个 404 强。
+ * 卡上留的是能一眼比较的那几样：
+ *
+ * - **它来自哪个源**：搜索结果是几个源混在一起的，同一个 slug 在不同源上是
+ *   不同的包。
+ * - **它在本机是什么处境**：已安装 / 可安装 / 仅浏览。「仅浏览」是别家目录的
+ *   镜像条目，这个源上没有它的包——点进去也装不了，先在卡上说清。
+ * - **热度**：下载量、评分、上游 star。三个都是给人排序用的参考，不是结论。
  */
-function MarketCard({ item, t, busy, install, onOpen, onInstall }: {
+function MarketCard({ item, t, install, onOpen }: {
   readonly item: MarketView
   readonly t: Translate
-  readonly busy: boolean
   readonly install: MarketInstall
   readonly onOpen: () => void
-  readonly onInstall: (overwrite: boolean) => void
 }) {
-  const foreign = !item.installable
   const { taken, status } = install
+  const state = status !== undefined
+    ? t('skill.market.status.installed')
+    : item.installable
+      ? t('skill.market.status.installable')
+      : t('skill.market.status.browseOnly')
+  // 「已安装」之外还有话说时接在同一行后面：这一行本来就是「它在本机怎么样」，
+  // 拆成两行会让卡片高度随状态跳。
+  const suffix = status?.outdated === true
+    ? ` · ${t('skill.market.status.update').replace('{v}', status.latest ?? '?')}`
+    : status === undefined && taken
+      ? ` · ${t('skill.market.sameName')}`
+      : ''
+
   return (
-    <div className={clsx(css.card, css.marketCard)}>
-      <span className={css.cardMark} aria-hidden="true">
-        <IconApiOutline14 size={18} />
+    <button type="button" className={css.marketCard} aria-label={item.name} onClick={onOpen}>
+      <span className={css.marketCardHead}>
+        <span
+          className={clsx(css.glyph, css[`glyph${String(toneOf(item.slug))}`])}
+          aria-hidden="true"
+        >
+          {initialOf(item.name)}
+        </span>
+        <span className={css.registryPill}>
+          <span className={css.registryDot} aria-hidden="true" />
+          {item.registryName}
+        </span>
       </span>
-      <div className={css.cardMain}>
-        <span className={css.cardTitle}>
-          <span className={css.cardName}>{item.name}</span>
-          {item.version !== undefined && <Pill className={clsx(css.tag)}>{`v${item.version}`}</Pill>}
-          {/*
-            「已安装」与「已有同名」分开说：前者是台账认得这一条，后者只是名字
-            撞上了别处装的东西。混成一句的话，「覆盖安装」会看着像更新，实际是
-            拿这个包盖掉另一个来源的同名技能。
-          */}
-          {status !== undefined && (
-            <Pill className={clsx(css.tag)}>
-              {`${t('skill.installed')} v${status.installed}`}
-            </Pill>
-          )}
-          {status?.outdated === true && (
-            <Pill className={clsx(css.tag, css.tagWarn)}>
-              {`${t('skill.updates.newer')} v${status.latest ?? '?'}`}
-            </Pill>
-          )}
-          {status === undefined && taken && (
-            <Pill className={clsx(css.tag, css.tagWarn)}>{t('skill.market.sameName')}</Pill>
-          )}
-          {item.securityStatus !== undefined && (
-            <Pill className={clsx(css.tag, css.tagWarn)}>{item.securityStatus}</Pill>
-          )}
+
+      <span
+        className={clsx(
+          css.cardStatus,
+          status !== undefined && css.cardStatusOn,
+          status === undefined && !item.installable && css.cardStatusOff,
+        )}
+      >
+        {`${state}${suffix}`}
+      </span>
+      <span className={css.cardName}>{item.name}</span>
+      <span className={css.cardDesc}>{item.description ?? item.name}</span>
+
+      {/* 撑开的空档：卡片高度由网格拉齐，底下那排数字得贴着底边对齐。 */}
+      <span className={css.cardSpacer} />
+
+      {item.tags.length > 0 && (
+        <span className={css.cardTags}>
+          {item.tags.slice(0, 3).map(tag => <span key={tag} className={css.cardTag}>{tag}</span>)}
         </span>
-        <span className={css.cardId}>
-          {item.owner === undefined ? item.slug : `${item.owner}/${item.slug}`}
+      )}
+
+      <span className={css.cardMetrics}>
+        <span className={css.metric}>
+          <IconDownloadOutline16 size={13} className={css.metricMark} />
+          {formatCount(item.downloadCount)}
         </span>
-        <span className={css.cardDesc}>{item.description ?? item.name}</span>
-        <span className={css.cardFacts}>
-          <span className={css.fact}>{item.registryName}</span>
-          {item.downloadCount > 0 && (
-            <span className={css.fact}>
-              {t('skill.market.downloads').replace('{n}', formatCount(item.downloadCount))}
-            </span>
-          )}
-          {item.stars > 0 && (
-            <span className={css.fact}>
-              {t('skill.market.stars').replace('{n}', formatCount(item.stars))}
-            </span>
-          )}
-          {item.tags.slice(0, 3).map(tag => <span key={tag} className={css.fact}>{tag}</span>)}
-        </span>
-        {foreign && (
-          <span className={css.cardDesc}>
-            {t('skill.market.foreign').replace('{kind}', item.installKind ?? '外部')}
+        {item.avgRating > 0 && (
+          <span className={css.metric}>
+            <IconStarOutline16 size={13} className={css.metricMark} />
+            {item.avgRating.toFixed(1)}
           </span>
         )}
-        <div className={css.cardActions}>
-          <Button
-            variant={taken ? 'outline' : 'primary'}
-            size="sm"
-            disabled={busy || foreign}
-            onClick={() => { onInstall(taken) }}
-          >
-            {t(taken ? 'skill.market.overwrite' : 'skill.market.install')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onOpen}>
-            {t('skill.market.detail')}
-          </Button>
-        </div>
-      </div>
-    </div>
+        {item.stars > 0 && (
+          <span className={css.metric}>
+            <IconBranchOutline16 size={13} className={css.metricMark} />
+            {formatCount(item.stars)}
+          </span>
+        )}
+      </span>
+    </button>
   )
 }
 
@@ -1496,56 +1721,179 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** 导入技能的四种来源。 */
+type ImportMode = 'zip' | 'url' | 'github' | 'slug'
+
 /**
- * 上传技能包的对话框。
+ * 四种来源的文案键，顺序就是对话框上的排法。
  *
- * 装成什么名字由包内 `SKILL.md` 的 frontmatter `name` 决定，与文件名无关——
- * 说明里写清这一条，否则「我传的是 my-skill.zip，怎么装出来叫别的」会是
- * 一个查不明白的问题。
+ * 写成一张表而不是 `` `skill.import.mode.${mode}` as LocaleKey ``：拼出来的键要
+ * 断言成 `LocaleKey` 才过得了类型检查，而断言正好把「这个键在不在字典里」这件
+ * 唯一值得检查的事绕过去了。列全之后漏一条是编译错误。
  */
-function UploadDialog({ open, data, t, onClose }: {
+interface ImportModeText {
+  readonly id: ImportMode
+  readonly label: LocaleKey
+  readonly note: LocaleKey
+  readonly hint: LocaleKey
+  readonly placeholder: LocaleKey
+}
+
+// 元组而不是数组：`noUncheckedIndexedAccess` 下 `[0]` 在数组上是可空的，
+// 而这张表恒非空，为它写一段 undefined 处理是给一个不存在的情况让路。
+const IMPORT_MODES: readonly [ImportModeText, ...ImportModeText[]] = [
+  {
+    id: 'zip',
+    label: 'skill.import.mode.zip',
+    note: 'skill.import.mode.zip.note',
+    hint: 'skill.import.mode.zip.hint',
+    // 压缩包那一栏摆的是文件选择器，不是输入框；这一条只为把表填齐。
+    placeholder: 'skill.import.mode.zip.placeholder',
+  },
+  {
+    id: 'url',
+    label: 'skill.import.mode.url',
+    note: 'skill.import.mode.url.note',
+    hint: 'skill.import.mode.url.hint',
+    placeholder: 'skill.import.mode.url.placeholder',
+  },
+  {
+    id: 'github',
+    label: 'skill.import.mode.github',
+    note: 'skill.import.mode.github.note',
+    hint: 'skill.import.mode.github.hint',
+    placeholder: 'skill.import.mode.github.placeholder',
+  },
+  {
+    id: 'slug',
+    label: 'skill.import.mode.slug',
+    note: 'skill.import.mode.slug.note',
+    hint: 'skill.import.mode.slug.hint',
+    placeholder: 'skill.import.mode.slug.placeholder',
+  },
+]
+
+/**
+ * 导入技能的对话框。
+ *
+ * 四种来源摆在同一个对话框里，因为对用户来说它们是同一件事——「我手上有一份
+ * 技能，让它进来」。底下也确实是同一条路：解包 → 校验（条目数、单文件与整包
+ * 体积、路径穿越）→ 落到技能根之外的暂存目录 → 整目录原子换上去。四条分支
+ * 只在「字节从哪来」这一步不同。
+ *
+ * 两处必须说清，否则会变成查不明白的问题：
+ *
+ * - **装成什么名字由包内 `SKILL.md` 的 frontmatter `name` 决定**，与文件名、
+ *   仓库名都无关。「我传的是 my-skill.zip，怎么装出来叫别的」就是这么来的。
+ * - **只有市场 slug 那一条记安装台账**。压缩包和链接没有 registry 坐标，
+ *   记一条假的进去，之后的更新检查会拿技能名去市场里碰一个同名条目，用一个
+ *   不相干的包盖掉用户的东西。代价是这两种装法之后不出现在更新检查里。
+ */
+function ImportDialog({ open, data, t, onClose }: {
   readonly open: boolean
   readonly data: SkillData
   readonly t: Translate
   readonly onClose: () => void
 }) {
   const state = useStore(data.store)
+  const [mode, setMode] = useState<ImportMode>('zip')
   const [file, setFile] = useState<File | undefined>(undefined)
+  const [value, setValue] = useState('')
   const [overwrite, setOverwrite] = useState(false)
   const [over, setOver] = useState(false)
   const input = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (!open) return
+    setMode('zip')
     setFile(undefined)
+    setValue('')
     setOverwrite(false)
     setOver(false)
   }, [open])
 
+  // 换来源时把上一种填的东西清掉：链接与 slug 共用同一个输入框，留着上一条
+  // 会让人在「GitHub 仓库」那一栏里看见一个 slug。
+  const pick = (next: ImportMode): void => {
+    setMode(next)
+    setValue('')
+    setFile(undefined)
+  }
+
+  // 表里一定找得到：`mode` 的取值就是这张表的 id。找不到时退回头一条，
+  // 免得为一个不可能的分支写一段 undefined 处理。
+  const current = IMPORT_MODES.find(one => one.id === mode) ?? IMPORT_MODES[0]
+  const ready = mode === 'zip' ? file !== undefined : value.trim() !== ''
+
+  const submit = (): void => {
+    const done = (ok: boolean): void => { if (ok) onClose() }
+    if (mode === 'zip') {
+      if (file === undefined) return
+      void data.upload(file, overwrite).then(done)
+      return
+    }
+    if (mode === 'slug') {
+      // `owner/name` 写法里的发布者要单独拆出来传：ClawHub 上不同发布者可以
+      // 用同一个 slug，不带 owner 下载会撞上另一个人的包。
+      const raw = value.trim()
+      const slash = raw.lastIndexOf('/')
+      const owner = slash === -1 ? undefined : raw.slice(0, slash)
+      const slug = slash === -1 ? raw : raw.slice(slash + 1)
+      void data.install(slug, undefined, undefined, overwrite, owner).then(done)
+      return
+    }
+    void data.importUrl(value.trim(), overwrite).then(done)
+  }
+
   return (
     <Modal
       open={open}
-      title={t('skill.upload.title')}
-      description={t('skill.upload.hint')}
+      title={t('skill.import.title')}
+      description={t('skill.import.hint')}
       closeLabel={t('skill.cancel')}
       onClose={onClose}
       footer={(
         <div className={css.dialogFooter}>
           <Button variant="ghost" onClick={onClose}>{t('skill.cancel')}</Button>
-          <Button
-            variant="primary"
-            disabled={file === undefined || state.busy}
-            onClick={() => {
-              if (file === undefined) return
-              void data.upload(file, overwrite).then((ok) => { if (ok) onClose() })
-            }}
-          >
-            {t('skill.upload.go')}
+          <Button variant="primary" disabled={!ready || state.busy} onClick={submit}>
+            {t('skill.import.go')}
           </Button>
         </div>
       )}
     >
       <div className={css.form}>
+        <div className={css.modeList}>
+          {IMPORT_MODES.map(one => (
+            <button
+              key={one.id}
+              type="button"
+              aria-pressed={mode === one.id}
+              className={clsx(css.mode, mode === one.id && css.modeActive)}
+              onClick={() => { pick(one.id) }}
+            >
+              <span className={css.modeMark} aria-hidden="true">
+                {one.id === 'zip'
+                  ? <IconArchiveOutline20 size={17} />
+                  : one.id === 'url'
+                    ? <IconLinkOutline16 size={17} />
+                    : one.id === 'github'
+                      ? <IconBranchOutline16 size={17} />
+                      : <IconApiOutline14 size={17} />}
+              </span>
+              <span className={css.modeText}>
+                <span className={css.modeLabel}>{t(one.label)}</span>
+                <span className={css.modeNote}>{t(one.note)}</span>
+              </span>
+              <span
+                className={clsx(css.modeCheck, mode === one.id && css.modeCheckOn)}
+                aria-hidden="true"
+              >
+                {mode === one.id && <IconCheckOutline16 size={13} />}
+              </span>
+            </button>
+          ))}
+        </div>
+
         <input
           ref={input}
           type="file"
@@ -1558,36 +1906,48 @@ function UploadDialog({ open, data, t, onClose }: {
             event.target.value = ''
           }}
         />
-        {file === undefined
-          ? (
-            <button
-              type="button"
-              className={clsx(css.drop, over && css.dropOver)}
-              onClick={() => { input.current?.click() }}
-              onDragOver={(event) => { event.preventDefault(); setOver(true) }}
-              onDragLeave={() => { setOver(false) }}
-              onDrop={(event) => {
-                event.preventDefault()
-                setOver(false)
-                const dropped = event.dataTransfer.files[0]
-                if (dropped !== undefined) setFile(dropped)
-              }}
-            >
-              <IconArchiveOutline20 size={22} />
-              <span>{t('skill.upload.drop')}</span>
-              <span className={css.dropHint}>
-                {t('skill.upload.accept').replace('{size}', formatBytes(MAX_UPLOAD_BYTES))}
-              </span>
-            </button>
-          )
+
+        {mode === 'zip'
+          ? file === undefined
+            ? (
+              <button
+                type="button"
+                className={clsx(css.drop, over && css.dropOver)}
+                onClick={() => { input.current?.click() }}
+                onDragOver={(event) => { event.preventDefault(); setOver(true) }}
+                onDragLeave={() => { setOver(false) }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  setOver(false)
+                  const dropped = event.dataTransfer.files[0]
+                  if (dropped !== undefined) setFile(dropped)
+                }}
+              >
+                <IconArchiveOutline20 size={22} />
+                <span>{t('skill.upload.drop')}</span>
+                <span className={css.dropHint}>
+                  {t('skill.upload.accept').replace('{size}', formatBytes(MAX_UPLOAD_BYTES))}
+                </span>
+              </button>
+            )
+            : (
+              <div className={css.picked}>
+                <span className={css.pickedName}>{file.name}</span>
+                <span className={css.pickedSize}>{formatBytes(file.size)}</span>
+                <Button variant="ghost" size="sm" onClick={() => { setFile(undefined) }}>
+                  {t('skill.upload.replace')}
+                </Button>
+              </div>
+            )
           : (
-            <div className={css.picked}>
-              <span className={css.pickedName}>{file.name}</span>
-              <span className={css.pickedSize}>{formatBytes(file.size)}</span>
-              <Button variant="ghost" size="sm" onClick={() => { setFile(undefined) }}>
-                {t('skill.upload.replace')}
-              </Button>
-            </div>
+            <input
+              className={css.modeInput}
+              value={value}
+              placeholder={t(current.placeholder)}
+              aria-label={t(current.label)}
+              onChange={(event) => { setValue(event.target.value) }}
+              onKeyDown={(event) => { if (event.key === 'Enter' && ready) submit() }}
+            />
           )}
 
         <label className={css.check}>
@@ -1599,7 +1959,9 @@ function UploadDialog({ open, data, t, onClose }: {
           <span>{t('skill.upload.overwrite')}</span>
         </label>
 
-        <p className={css.hint}>{t('skill.upload.note')}</p>
+        <p className={css.hint}>
+          {t(current.hint).replace('{size}', formatBytes(MAX_UPLOAD_BYTES))}
+        </p>
       </div>
     </Modal>
   )
@@ -1686,25 +2048,72 @@ function CreateDialog({ open, data, t, onClose, onCreated }: {
   )
 }
 
+/** 一条成功提示在屏幕上待多久。够读完两行字，又不至于一直挡着列表。 */
+const TOAST_LINGER_MS = 6000
+
 /**
- * 提示与错误。
+ * 写操作的结果，浮在这一页左下角。
  *
- * 两者分开显示：`notice` 是生效结论这类结果说明，操作是成功的；
- * `error` 是操作失败。混成一条会让人分不清刚才那下到底成没成。
+ * 从原先夹在页签与列表之间的一条横幅改成浮层：那条横幅会把整份列表往下推一
+ * 截，装完一个技能之后刚才在看的那一行就跑了位置——而人这时候多半正想接着
+ * 装下一个。
+ *
+ * 三种结果分得很开，因为它们要人做的事完全不同：
+ *
+ * - **失败**：这一步没做成，得重来。
+ * - **成功且生效**：可以接着干别的。这一种会自己消失。
+ * - **成功但没生效**：文件确实写进去了，但回读 `ctx.skills` 得到的结论是它调
+ *   不到（多半是被同名的更高优先级来源遮蔽）。这句是这一域最要紧的一句话，
+ *   它意味着刚才那下白做了，所以**不自动消失**，要人自己点掉。
+ *
+ * 「生没生效」是回读来的事实，不是「重启后生效」那种预测——写完下一个模型
+ * 回合就生效，会不会生效取决于有没有人挡在前面。
  */
 function Notices({ data, t }: { readonly data: SkillData; readonly t: Translate }) {
   const state = useStore(data.store)
-  if (state.error === undefined && state.notice === undefined) return null
+  const { error, notice, activation } = state
+  const stuck = activation !== undefined && !activation.active
+  const transient = error === undefined && notice !== undefined && !stuck
+
+  // 依赖里带上 `notice` 本身：连着装两个技能时第二条提示要重新计时，
+  // 只看 `transient` 的话它是同一个 true，计时器不会重来。
+  useEffect(() => {
+    if (!transient) return undefined
+    const timer = setTimeout(() => { data.dismiss() }, TOAST_LINGER_MS)
+    return () => { clearTimeout(timer) }
+  }, [data, transient, notice])
+
+  if (error === undefined && notice === undefined) return null
+
   return (
-    <div className={css.notices}>
-      {state.error !== undefined && <ErrorLine text={state.error} />}
-      {state.notice !== undefined && (
-        <p className={css.notice}>
-          <span>{state.notice}</span>
+    <div className={css.toasts} role="status" aria-live="polite">
+      {error !== undefined && (
+        <div className={clsx(css.toast, css.toastBad)}>
+          <IconWarningOutline16 size={16} className={css.toastMark} />
+          <span className={css.toastText}>
+            <span className={css.toastTitle}>{t('skill.toast.failed')}</span>
+            <span className={css.toastBody}>{error}</span>
+          </span>
           <button type="button" className={css.dismiss} onClick={() => { data.dismiss() }}>
             {t('skill.dismiss')}
           </button>
-        </p>
+        </div>
+      )}
+      {notice !== undefined && (
+        <div className={clsx(css.toast, stuck && css.toastWarn)}>
+          {stuck
+            ? <IconWarningOutline16 size={16} className={css.toastMark} />
+            : <IconCheckOutline16 size={16} className={css.toastMark} />}
+          <span className={css.toastText}>
+            <span className={css.toastTitle}>
+              {t(stuck ? 'skill.toast.inactive' : 'skill.toast.done')}
+            </span>
+            <span className={css.toastBody}>{notice}</span>
+          </span>
+          <button type="button" className={css.dismiss} onClick={() => { data.dismiss() }}>
+            {t('skill.dismiss')}
+          </button>
+        </div>
       )}
     </div>
   )
